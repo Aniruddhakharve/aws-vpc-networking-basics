@@ -8,7 +8,7 @@ This project was created to develop a practical understanding of AWS networking 
 
 ## 🏗️ Architecture
 
-![AWS VPC Network Architecture](architecture/aws-vpc-network-architecture.png)
+![AWS VPC Network Architecture](architecture/AWS-VPC-Subnet-Routing-Architecture.png)
 
 ### Architecture Overview
 
