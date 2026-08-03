@@ -19,7 +19,7 @@ For example:
 
 The **destination** specifies the IP address range the traffic is trying to reach, while the **target** specifies where matching traffic should be sent.
 
-In this project, separate route tables are used for the public and private subnets.
+In this project, separate route tables are used for the public and private subnets so that each subnet can have different routing behavior.
 
 ---
 
@@ -29,7 +29,7 @@ Creating a VPC, subnets, and an Internet Gateway does not by itself determine ho
 
 Route tables provide those routing decisions.
 
-Our architecture contains:
+At this stage of the project, the architecture contains:
 
 ```text
 VPC: 31.0.0.0/16
@@ -43,15 +43,15 @@ VPC: 31.0.0.0/16
 
 We want different routing behavior for these two subnets.
 
-The public subnet should have a route toward the Internet Gateway.
+The public subnet requires a route toward the Internet Gateway.
 
-The private subnet should not have a direct Internet Gateway route.
+The private subnet should not have a **direct** route to the Internet Gateway.
 
 Therefore, separate route tables are used.
 
 ---
 
-# 🗺️ Routing Design
+# 🗺️ Initial Routing Design
 
 ## Public Route Table
 
@@ -73,7 +73,7 @@ Public Subnet
 
 ## Private Route Table
 
-The private route table contains:
+At this stage of the project, the private route table initially contains:
 
 | Destination | Target | Purpose |
 |---|---|---|
@@ -95,6 +95,8 @@ There is no:
 route in the private route table.
 
 Therefore, the private subnet does not have a direct route to the Internet Gateway.
+
+> **Architecture Update:** Later in the project, a NAT Gateway is introduced to provide outbound internet connectivity to resources in the private subnet. The private route table is then updated with `0.0.0.0/0 → NAT Gateway`. The private subnet still does not receive a direct route to the Internet Gateway. See [NAT Gateway Configuration](05-nat-gateway.md) for the updated configuration.
 
 ---
 
@@ -126,9 +128,9 @@ Private Subnet
 31.0.2.0/24
 ```
 
-Because both subnet CIDRs belong to the same VPC CIDR, the local route provides the routing path between them.
+Because both subnet CIDR blocks belong to the same VPC CIDR, the local route provides the routing path between them.
 
-Security Groups, Network ACLs, and resource-level configuration can still control whether particular traffic is permitted.
+Security Groups, Network ACLs, and resource-level configuration can still determine whether particular traffic is permitted.
 
 ---
 
@@ -143,7 +145,7 @@ Target:      Internet Gateway
 
 `0.0.0.0/0` represents all IPv4 destinations.
 
-This route acts as the default path for traffic that needs to leave the VPC toward the Internet.
+This route acts as the default path for IPv4 traffic that needs to leave the VPC toward the Internet.
 
 Therefore:
 
@@ -162,6 +164,18 @@ Internet Gateway
       ▼
 Internet
 ```
+
+Later in the project, the private route table also receives a default route, but its target is different:
+
+```text
+Public Route Table
+0.0.0.0/0 → Internet Gateway
+
+Private Route Table
+0.0.0.0/0 → NAT Gateway
+```
+
+This distinction allows the public and private subnets to have different Internet connectivity models.
 
 ---
 
@@ -202,7 +216,7 @@ and:
 
 However, `/16` is more specific than `/0`.
 
-Therefore AWS selects:
+Therefore, AWS selects:
 
 ```text
 31.0.0.0/16 → local
@@ -224,7 +238,15 @@ The default route matches:
 0.0.0.0/0 → Internet Gateway
 ```
 
-so the traffic is directed toward the Internet Gateway.
+so traffic from the public subnet is directed toward the Internet Gateway.
+
+After NAT Gateway is introduced later in the project, traffic from the private subnet to the same external destination instead matches:
+
+```text
+0.0.0.0/0 → NAT Gateway
+```
+
+because the private subnet uses a different route table.
 
 ---
 
@@ -313,25 +335,35 @@ A separate route table was created for the private subnet.
 
 ![Private Route Table Creation](../screenshots/11-private-route-table-creation.png)
 
-The private route table retains the VPC local route:
+At this stage, the private route table retains only the VPC local route:
 
 ```text
 31.0.0.0/16 → local
 ```
 
-but does not contain:
+and does not contain:
 
 ```text
 0.0.0.0/0 → Internet Gateway
 ```
 
-The private subnet therefore has no direct Internet Gateway route in this architecture.
+Therefore, the private subnet has no direct Internet Gateway route.
+
+Later, when the NAT Gateway is introduced, this same private route table is extended with:
+
+```text
+0.0.0.0/0 → NAT Gateway
+```
+
+That later configuration is documented separately in:
+
+**[05 – NAT Gateway Configuration →](05-nat-gateway.md)**
 
 ---
 
-# 🔄 Comparing Public and Private Routing
+# 🔄 Comparing the Initial Public and Private Routing
 
-The final routing design can be summarized as:
+At this stage of the project, the routing design can be summarized as:
 
 ```text
                          Internet
@@ -368,7 +400,7 @@ Public Route Table
                     Internet
 ```
 
-versus:
+versus the initial private routing:
 
 ```text
 PRIVATE
@@ -385,13 +417,53 @@ No direct IGW route
 
 ---
 
-# 📸 Final VPC Resource Map
+# 🔄 Routing After the NAT Gateway Extension
 
-After configuring the route tables and subnet associations, the AWS VPC Resource Map shows the relationship between the networking components.
+Later in the project, the private subnet's routing is extended without giving the private subnet a direct Internet Gateway route.
 
-![Final AWS VPC Resource Map](../screenshots/12-final-vpc-resource-map.png)
+The updated design becomes:
 
-The completed architecture contains:
+```text
+PUBLIC SUBNET
+
+31.0.1.0/24
+     │
+     ▼
+Public Route Table
+     │
+     ├── 31.0.0.0/16 → local
+     │
+     └── 0.0.0.0/0 → Internet Gateway
+```
+
+and:
+
+```text
+PRIVATE SUBNET
+
+31.0.2.0/24
+     │
+     ▼
+Private Route Table
+     │
+     ├── 31.0.0.0/16 → local
+     │
+     └── 0.0.0.0/0 → NAT Gateway
+```
+
+This allows resources in the private subnet to initiate outbound Internet connections while remaining without a direct route to the Internet Gateway.
+
+The NAT Gateway implementation and validation are covered in the next documentation section.
+
+---
+
+# 📸 Initial VPC Resource Map
+
+After configuring the original route tables and subnet associations, the AWS VPC Resource Map showed the relationship between the networking components at that stage.
+
+![Initial AWS VPC Resource Map](../screenshots/12-final-vpc-resource-map.png)
+
+The architecture at this point contained:
 
 ```text
 VPC
@@ -406,6 +478,8 @@ VPC
     └── Private Route Table
         └── Local Route
 ```
+
+> This screenshot represents the architecture **before the NAT Gateway and EC2 instances were added**. A newer VPC Resource Map is included later in the project after the architecture is extended.
 
 ---
 
@@ -434,6 +508,14 @@ IGW route ≠ automatic Internet access for every resource
 
 The route is one important part of the complete networking configuration.
 
+Similarly, adding:
+
+```text
+0.0.0.0/0 → NAT Gateway
+```
+
+to the private route table provides an outbound routing path for the private subnet, but the complete traffic path still depends on the NAT Gateway and the surrounding VPC networking configuration.
+
 ---
 
 # 🧠 Key Concepts Learned
@@ -448,12 +530,14 @@ Through the route table configuration, this project demonstrates:
 - How public and private subnet routing differs
 - How longest prefix matching determines which route AWS selects
 - Why an Internet Gateway attachment alone does not make a subnet public
+- How different subnets can use different default route targets
+- How the private route table can later be extended with a NAT Gateway without giving the private subnet a direct IGW route
 
 ---
 
-# ✅ Final Result
+# ✅ Result
 
-The completed routing architecture is:
+The initial routing architecture implemented in this stage was:
 
 ```text
 AWS VPC: 31.0.0.0/16
@@ -470,24 +554,46 @@ AWS VPC: 31.0.0.0/16
               └── 31.0.0.0/16 → local
 ```
 
-This completes the fundamental AWS VPC networking architecture implemented in this project.
+The architecture is subsequently extended to:
+
+```text
+AWS VPC: 31.0.0.0/16
+│
+├── Public Subnet: 31.0.1.0/24
+│      │
+│      └── Public Route Table
+│             ├── 31.0.0.0/16 → local
+│             └── 0.0.0.0/0 → Internet Gateway
+│
+└── Private Subnet: 31.0.2.0/24
+       │
+       └── Private Route Table
+              ├── 31.0.0.0/16 → local
+              └── 0.0.0.0/0 → NAT Gateway
+```
+
+This preserves the private subnet's separation from a direct Internet Gateway route while allowing outbound Internet connectivity through the NAT Gateway.
 
 ---
 
-## 🏁 Project Complete
+## 🏁 Route Table Configuration Complete
 
-The following components have now been configured and documented:
+The following routing concepts have now been configured and documented:
 
-- ✅ Custom Amazon VPC
-- ✅ Public Subnet
-- ✅ Private Subnet
-- ✅ Internet Gateway
 - ✅ Public Route Table
 - ✅ Private Route Table
-- ✅ Default Internet Route
+- ✅ VPC Local Route
+- ✅ Public Default Route
+- ✅ Internet Gateway Route
 - ✅ Subnet Associations
-- ✅ Final VPC Resource Map
+- ✅ Longest Prefix Matching
+- ✅ Public vs Private Routing
+- ✅ NAT Gateway Route Extension
+
+The next stage introduces the NAT Gateway used by the private subnet.
 
 ---
 
-[← Previous: Internet Gateway](03-internet-gateway.md) | [Back to Project README](../README.md)
+[← Previous: Internet Gateway](03-internet-gateway.md) | [Next: NAT Gateway →](05-nat-gateway.md)
+
+[Back to Project README](../README.md)

@@ -1,18 +1,18 @@
 # AWS VPC Networking Fundamentals
 
-A hands-on AWS networking project demonstrating the design and configuration of a custom Amazon VPC with public and private subnets, an Internet Gateway, custom route tables, and subnet associations.
+A hands-on AWS networking project demonstrating the design, implementation, and testing of a custom Amazon VPC with public and private subnets, an Internet Gateway, custom route tables, a NAT Gateway, and EC2 instances deployed across the network.
 
-This project was created to develop a practical understanding of AWS networking fundamentals and how routing controls communication between resources inside a VPC and the Internet.
+This project was created to develop a practical understanding of AWS networking fundamentals, subnet routing, public and private EC2 connectivity, and how private resources can securely initiate outbound Internet connections through a NAT Gateway.
 
 ---
 
 ## 🏗️ Architecture
 
-![AWS VPC Network Architecture](architecture/AWS-VPC-Subnet-Routing-Architecture.png)
+![AWS VPC Network Architecture](architecture/AWS-VPC-EC2-NAT-Gateway-Architecture.png)
 
 ### Architecture Overview
 
-The network is deployed in the **Asia Pacific (Mumbai) `ap-south-1`** AWS Region and consists of:
+The network is deployed in the **Asia Pacific (Mumbai) `ap-south-1`** AWS Region and currently consists of:
 
 - One custom VPC with CIDR block `31.0.0.0/16`
 - One public subnet in `ap-south-1a`
@@ -20,9 +20,15 @@ The network is deployed in the **Asia Pacific (Mumbai) `ap-south-1`** AWS Region
 - One Internet Gateway attached to the VPC
 - One custom public route table
 - One custom private route table
-- A default Internet route for the public subnet
+- One NAT Gateway for private subnet outbound Internet connectivity
+- One EC2 instance in the public subnet
+- One EC2 instance in the private subnet
 
-The public subnet has a route to the Internet Gateway, while the private subnet does not have a direct route to the Internet.
+The public subnet uses a default route to the Internet Gateway.
+
+The private subnet does **not** have a direct route to the Internet Gateway. Instead, Internet-bound traffic from the private subnet is sent to the NAT Gateway.
+
+The public EC2 instance can be accessed externally using SSH, while the private EC2 instance is accessed through the public EC2 instance using its private IPv4 address.
 
 ---
 
@@ -36,9 +42,15 @@ The objective of this project is to gain hands-on experience with core AWS VPC n
 - Deploying subnets across Availability Zones
 - Creating and attaching an Internet Gateway
 - Creating custom route tables
-- Configuring Internet routing
+- Configuring public Internet routing
 - Associating route tables with subnets
-- Understanding the difference between public and private subnet routing
+- Creating and configuring a NAT Gateway
+- Providing outbound Internet connectivity to a private subnet
+- Launching EC2 instances into specific VPC subnets
+- Understanding public and private IPv4 addressing
+- Connecting to EC2 instances using SSH
+- Accessing a private EC2 instance through a public EC2 instance
+- Validating outbound Internet connectivity from a private EC2 instance
 
 ---
 
@@ -52,7 +64,11 @@ The objective of this project is to gain hands-on experience with core AWS VPC n
 | Public Subnet AZ | `ap-south-1a` |
 | Private Subnet | `31.0.2.0/24` |
 | Private Subnet AZ | `ap-south-1b` |
-| Internet Route | `0.0.0.0/0 → Internet Gateway` |
+| Public Default Route | `0.0.0.0/0 → Internet Gateway` |
+| Private Default Route | `0.0.0.0/0 → NAT Gateway` |
+| Public EC2 | Public + Private IPv4 |
+| Private EC2 | Private IPv4 only |
+| Private EC2 Internet Access | NAT Gateway |
 
 ---
 
@@ -62,45 +78,63 @@ The objective of this project is to gain hands-on experience with core AWS VPC n
 
 The VPC provides a logically isolated virtual network in AWS where networking resources can be created and configured.
 
-**VPC CIDR:** `31.0.0.0/16`
+**VPC CIDR:**
+
+```text
+31.0.0.0/16
+```
 
 [View VPC implementation →](docs/01-vpc.md)
 
+---
+
 ### Public and Private Subnets
 
-The VPC is divided into two subnets:
+The VPC is divided into two subnets.
 
-**Public Subnet**
+#### Public Subnet
 
 ```text
 CIDR: 31.0.1.0/24
 Availability Zone: ap-south-1a
 ```
 
-**Private Subnet**
+The public subnet is associated with a route table containing a default route to the Internet Gateway.
+
+#### Private Subnet
 
 ```text
 CIDR: 31.0.2.0/24
 Availability Zone: ap-south-1b
 ```
 
-The public subnet is associated with a route table containing a route to the Internet Gateway.
+The private subnet does not have a direct route to the Internet Gateway.
 
-The private subnet does not have a direct Internet Gateway route.
+Instead, its default route points to the NAT Gateway for outbound Internet connectivity.
 
 [View subnet implementation →](docs/02-subnets.md)
+
+---
 
 ### Internet Gateway
 
 An Internet Gateway is created and attached to the VPC to provide a path between the VPC and the Internet.
 
-Attaching an Internet Gateway to a VPC alone does not automatically make a subnet public. The subnet must use a route table containing an appropriate route to the Internet Gateway.
+Attaching an Internet Gateway to a VPC alone does not automatically make a subnet public.
+
+The public subnet must use a route table containing:
+
+```text
+0.0.0.0/0 → Internet Gateway
+```
 
 [View Internet Gateway implementation →](docs/03-internet-gateway.md)
 
+---
+
 ### Route Tables
 
-Two custom route tables are used in the architecture.
+Two custom route tables are used to provide different routing behavior for the public and private subnets.
 
 #### Public Route Table
 
@@ -111,63 +145,264 @@ Two custom route tables are used in the architecture.
 
 Associated with:
 
-`31.0.1.0/24` — Public Subnet
+```text
+31.0.1.0/24 — Public Subnet
+```
 
 #### Private Route Table
+
+The private route table was initially created with only the VPC local route.
+
+After introducing the NAT Gateway, it was extended to:
 
 | Destination | Target |
 |---|---|
 | `31.0.0.0/16` | `local` |
+| `0.0.0.0/0` | NAT Gateway |
 
 Associated with:
 
-`31.0.2.0/24` — Private Subnet
+```text
+31.0.2.0/24 — Private Subnet
+```
 
-The private route table does not contain a default route to the Internet Gateway.
+The private subnet therefore has outbound Internet connectivity without receiving a direct route to the Internet Gateway.
 
 [View route table implementation →](docs/04-route-tables.md)
 
 ---
 
-## 🔄 Traffic Flow
+### NAT Gateway
 
-### Public Subnet
+A NAT Gateway provides outbound Internet connectivity for resources deployed inside the private subnet.
 
-Internet-bound traffic from resources in the public subnet follows:
+The private route table contains:
 
 ```text
+0.0.0.0/0 → NAT Gateway
+```
+
+Internet-bound traffic from the private subnet therefore follows:
+
+```text
+Private Resource
+       ↓
+Private Route Table
+       ↓
+NAT Gateway
+       ↓
+Internet Gateway
+       ↓
+Internet
+```
+
+This allows a private EC2 instance to initiate connections to the Internet without requiring its own public IPv4 address.
+
+[View NAT Gateway implementation →](docs/05-nat-gateway.md)
+
+---
+
+### EC2 Instances in the VPC
+
+Two EC2 instances were deployed to validate the networking architecture.
+
+#### Public EC2
+
+The public EC2 instance was deployed inside:
+
+```text
+Public Subnet
+31.0.1.0/24
+```
+
+It has:
+
+```text
+Private IPv4: 31.0.1.161
+Public IPv4:  Assigned by AWS
+```
+
+The public IPv4 address allows the instance to be accessed externally using SSH when the required network access configuration is present.
+
+#### Private EC2
+
+The private EC2 instance was deployed inside:
+
+```text
+Private Subnet
+31.0.2.0/24
+```
+
+It has:
+
+```text
+Private IPv4: 31.0.2.152
+Public IPv4:  None
+```
+
+Because the instance has no public IPv4 address, it was accessed through the public EC2 instance using VPC local routing.
+
+[View EC2 implementation →](docs/06-ec2-in-vpc.md)
+
+---
+
+## 🔄 Traffic Flow
+
+The completed architecture demonstrates several different networking paths.
+
+### Public EC2 → Internet
+
+Internet-bound traffic from the public EC2 instance follows:
+
+```text
+Public EC2
+     ↓
 Public Subnet
      ↓
 Public Route Table
      ↓
-0.0.0.0/0
+0.0.0.0/0 → Internet Gateway
+     ↓
+Internet
+```
+
+---
+
+### Public EC2 → Private EC2
+
+The private EC2 instance is accessed through the public EC2 instance.
+
+```text
+Administrator
+      ↓
+     SSH
+      ↓
+Public EC2
+31.0.1.161
+      ↓
+VPC Local Routing
+      ↓
+Private EC2
+31.0.2.152
+```
+
+Both addresses belong to:
+
+```text
+31.0.0.0/16
+```
+
+Therefore, the VPC local route provides the routing path between the two subnet networks.
+
+---
+
+### Private EC2 → Internet
+
+The private EC2 instance does not have a public IPv4 address and does not have a direct Internet Gateway route.
+
+Its outbound Internet traffic follows:
+
+```text
+Private EC2
+31.0.2.152
+      ↓
+Private Subnet
+31.0.2.0/24
+      ↓
+Private Route Table
+      ↓
+0.0.0.0/0 → NAT Gateway
+      ↓
+NAT Gateway
+      ↓
+Internet Gateway
+      ↓
+Internet
+```
+
+This allows the private EC2 instance to initiate outbound Internet connections while remaining without a public IPv4 address.
+
+---
+
+## 🔐 Private EC2 Access
+
+The private EC2 instance was not accessed directly from the Internet.
+
+For this hands-on lab, the public EC2 instance was used as an intermediate host.
+
+The access path was:
+
+```text
+Local / AWS Environment
+        ↓
+       SSH
+        ↓
+   Public EC2
+        ↓
+       SSH
+        ↓
+   Private EC2
+```
+
+The SSH private key was temporarily transferred to the public EC2 instance for the course lab and was **not committed to this repository**.
+
+> **Security Note:** Copying private SSH keys onto an intermediate instance is not the preferred approach for production environments. More secure access methods can include SSH agent forwarding or AWS Systems Manager Session Manager.
+
+---
+
+## 🧪 Connectivity Validation
+
+### Public EC2 Access
+
+Successful SSH connectivity to the public EC2 instance was verified.
+
+![Public EC2 SSH Connection](screenshots/20-public-ec2-ssh-connection.png)
+
+---
+
+### Private EC2 Access
+
+The private EC2 instance was successfully accessed from the public EC2 instance using its private IPv4 address.
+
+![Private EC2 SSH via Public EC2](screenshots/23-private-ec2-ssh-via-public-ec2.png)
+
+---
+
+### Private EC2 Internet Connectivity
+
+Outbound Internet connectivity from the private EC2 instance was tested using:
+
+```bash
+ping 8.8.8.8
+```
+
+The test successfully received responses with `0% packet loss`.
+
+![Private EC2 Internet Test](screenshots/24-private-ec2-internet-test.png)
+
+This validates the path:
+
+```text
+Private EC2
+     ↓
+Private Route Table
+     ↓
+NAT Gateway
      ↓
 Internet Gateway
      ↓
 Internet
 ```
 
-### Private Subnet
-
-The private subnet currently contains only the VPC local route:
-
-```text
-Private Subnet
-     ↓
-Private Route Table
-     ↓
-31.0.0.0/16 → local
-```
-
-Therefore, it does not have a direct route to the Internet.
-
 ---
 
 ## 📸 Final AWS Resource Map
 
-The AWS VPC Resource Map below shows the relationship between the VPC, subnets, route tables, and Internet Gateway after completing the configuration.
+The AWS VPC Resource Map below shows the updated networking relationships after adding the NAT Gateway and extending the VPC architecture.
 
-![AWS VPC Resource Map](screenshots/12-final-vpc-resource-map.png)
+![AWS VPC Resource Map](screenshots/25-final-vpc-resource-map.png)
+
+An earlier Resource Map representing the architecture before the NAT Gateway and EC2 extension is preserved in the route table documentation to show the progression of the lab.
 
 ---
 
@@ -179,8 +414,10 @@ Detailed step-by-step documentation is available for each part of the project:
 2. [Public and Private Subnet Configuration](docs/02-subnets.md)
 3. [Internet Gateway Configuration](docs/03-internet-gateway.md)
 4. [Route Table Configuration](docs/04-route-tables.md)
+5. [NAT Gateway Configuration](docs/05-nat-gateway.md)
+6. [EC2 Instances in Public and Private Subnets](docs/06-ec2-in-vpc.md)
 
-Each section includes explanations of the networking concept, configuration details, implementation steps, and AWS Console screenshots.
+Each section includes explanations of the networking concept, configuration details, implementation steps, traffic-flow explanations, and AWS Console screenshots.
 
 ---
 
@@ -193,13 +430,15 @@ aws-vpc-networking-basics/
 ├── LICENSE
 │
 ├── architecture/
-│   └── aws-vpc-network-architecture.png
+│   └── AWS-VPC-Subnet-Routing-Architecture.png
 │
 ├── docs/
 │   ├── 01-vpc.md
 │   ├── 02-subnets.md
 │   ├── 03-internet-gateway.md
-│   └── 04-route-tables.md
+│   ├── 04-route-tables.md
+│   ├── 05-nat-gateway.md
+│   └── 06-ec2-in-vpc.md
 │
 └── screenshots/
     ├── 01-vpc-configuration.png
@@ -213,7 +452,20 @@ aws-vpc-networking-basics/
     ├── 09-public-route-table-internet-route.png
     ├── 10-public-subnet-route-table-association.png
     ├── 11-private-route-table-creation.png
-    └── 12-final-vpc-resource-map.png
+    ├── 12-final-vpc-resource-map.png
+    ├── 13-nat-gateway-configuration.png
+    ├── 14-nat-gateway-available.png
+    ├── 15-private-route-table-nat-route-configuration.png
+    ├── 16-private-route-table-nat-route.png
+    ├── 17-public-ec2-network-configuration.png
+    ├── 18-public-ec2-running.png
+    ├── 19-public-ec2-network-details.png
+    ├── 20-public-ec2-ssh-connection.png
+    ├── 21-private-ec2-network-configuration.png
+    ├── 22-private-ec2-running.png
+    ├── 23-private-ec2-ssh-via-public-ec2.png
+    ├── 24-private-ec2-internet-test.png
+    └── 25-final-vpc-resource-map.png
 ```
 
 ---
@@ -230,11 +482,33 @@ Through this project, I gained hands-on experience with:
 - AWS route tables
 - Local VPC routing
 - Default routes (`0.0.0.0/0`)
+- Longest prefix matching
 - Subnet-to-route-table associations
 - Public vs. private subnet routing
+- NAT Gateway configuration
+- Private subnet outbound Internet connectivity
+- Public and private EC2 deployment
+- Public vs. private IPv4 addressing
+- SSH connectivity
+- Accessing private resources through a public instance
+- Testing network connectivity
 - AWS VPC Resource Map
 
-One of the key concepts demonstrated by this project is that simply naming a subnet "public" does not make it public. Internet connectivity depends on the subnet's routing configuration, along with the networking configuration of resources deployed inside it.
+One of the key concepts demonstrated by this project is that simply naming a subnet **public** or **private** does not determine its networking behavior.
+
+Routing and resource configuration determine how resources communicate.
+
+In this architecture:
+
+```text
+Public Subnet
+0.0.0.0/0 → Internet Gateway
+
+Private Subnet
+0.0.0.0/0 → NAT Gateway
+```
+
+The private EC2 instance can therefore initiate outbound Internet connections without having a public IPv4 address or a direct Internet Gateway route.
 
 ---
 
@@ -242,7 +516,7 @@ One of the key concepts demonstrated by this project is that simply naming a sub
 
 AWS resources created for hands-on practice should be removed after completing the lab when they are no longer required.
 
-Resources created in this project include:
+Resources created in this project currently include:
 
 - Custom VPC
 - Public subnet
@@ -250,9 +524,21 @@ Resources created in this project include:
 - Internet Gateway
 - Public route table
 - Private route table
+- NAT Gateway
+- NAT Gateway public IP / Elastic IP resources where applicable
+- Public EC2 instance
+- Private EC2 instance
+
+NAT Gateway and public IPv4 resources can incur charges, so temporary lab resources should not be left running unnecessarily.
 
 ---
 
 ## ⚠️ Note
 
-This project is intended for educational and hands-on AWS networking practice. The architecture focuses on fundamental VPC networking concepts and is not intended to represent a complete production environment.
+This project is intended for educational and hands-on AWS networking practice.
+
+The architecture focuses on understanding AWS VPC networking concepts and is **not intended to represent a complete production environment**.
+
+The VPC CIDR `31.0.0.0/16` follows the addressing used during the training lab. For real-world private VPC designs, RFC 1918 private address ranges such as `10.0.0.0/8`, `172.16.0.0/12`, or `192.168.0.0/16` would normally be used.
+
+The project will continue to evolve as additional AWS networking concepts are implemented.
