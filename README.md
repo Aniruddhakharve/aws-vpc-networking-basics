@@ -2,7 +2,7 @@
 
 A hands-on AWS networking project demonstrating the design, implementation, and testing of a custom Amazon VPC with public and private subnets, an Internet Gateway, custom route tables, a NAT Gateway, and EC2 instances deployed across the network.
 
-This project was created to develop a practical understanding of AWS networking fundamentals, subnet routing, public and private EC2 connectivity, and how private resources can securely initiate outbound Internet connections through a NAT Gateway.
+This project was created to develop a practical understanding of AWS networking fundamentals, subnet routing, public and private EC2 connectivity, private subnet outbound Internet access through a NAT Gateway, and automated EC2 initialization using User Data.
 
 ---
 
@@ -21,8 +21,8 @@ The network is deployed in the **Asia Pacific (Mumbai) `ap-south-1`** AWS Region
 - One custom public route table
 - One custom private route table
 - One NAT Gateway for private subnet outbound Internet connectivity
-- One EC2 instance in the public subnet
-- One EC2 instance in the private subnet
+- EC2 instances deployed in the public and private subnets
+- EC2 User Data used to automate Apache web server configuration
 
 The public subnet uses a default route to the Internet Gateway.
 
@@ -51,6 +51,9 @@ The objective of this project is to gain hands-on experience with core AWS VPC n
 - Connecting to EC2 instances using SSH
 - Accessing a private EC2 instance through a public EC2 instance
 - Validating outbound Internet connectivity from a private EC2 instance
+- Automating EC2 initialization using User Data
+- Automatically installing and configuring Apache
+- Validating web server deployment using `curl` and a browser
 
 ---
 
@@ -204,7 +207,7 @@ This allows a private EC2 instance to initiate connections to the Internet witho
 
 ### EC2 Instances in the VPC
 
-Two EC2 instances were deployed to validate the networking architecture.
+Two EC2 instances were deployed to validate the public and private subnet networking architecture.
 
 #### Public EC2
 
@@ -243,6 +246,36 @@ Public IPv4:  None
 Because the instance has no public IPv4 address, it was accessed through the public EC2 instance using VPC local routing.
 
 [View EC2 implementation →](docs/06-ec2-in-vpc.md)
+
+---
+
+### EC2 User Data
+
+EC2 User Data was used to automate the initial configuration of a public EC2 instance.
+
+A Bash script was supplied during instance launch to automatically:
+
+- Update the package repository
+- Install Apache
+- Generate a custom HTML web page
+- Display the instance hostname and private IPv4 address
+- Restart the Apache service
+
+The deployment was validated by checking the Apache service:
+
+```bash
+sudo systemctl status apache2
+```
+
+The web server was then tested locally using:
+
+```bash
+curl localhost
+```
+
+Finally, the instance's public IPv4 address was opened in a web browser to verify that Apache was serving the generated page externally.
+
+[View EC2 User Data implementation →](docs/07-ec2-user-data.md)
 
 ---
 
@@ -337,11 +370,11 @@ Local / AWS Environment
         ↓
        SSH
         ↓
-   Public EC2
+    Public EC2
         ↓
        SSH
         ↓
-   Private EC2
+    Private EC2
 ```
 
 The SSH private key was temporarily transferred to the public EC2 instance for the course lab and was **not committed to this repository**.
@@ -396,6 +429,26 @@ Internet
 
 ---
 
+### EC2 User Data and Apache Validation
+
+The EC2 instance launched with User Data successfully completed its automated initialization.
+
+Apache was verified as running:
+
+![Apache Service Running](screenshots/28-apache-service-running.png)
+
+The generated page was tested locally using `curl localhost`:
+
+![EC2 User Data Localhost Test](screenshots/29-user-data-localhost-test.png)
+
+The web server was also successfully accessed using the EC2 instance's public IPv4 address from a browser:
+
+![EC2 User Data Browser Test](screenshots/30-user-data-browser-test.png)
+
+This confirms that the User Data script successfully installed Apache and generated the custom web page during instance initialization.
+
+---
+
 ## 📸 Final AWS Resource Map
 
 The AWS VPC Resource Map below shows the updated networking relationships after adding the NAT Gateway and extending the VPC architecture.
@@ -416,6 +469,7 @@ Detailed step-by-step documentation is available for each part of the project:
 4. [Route Table Configuration](docs/04-route-tables.md)
 5. [NAT Gateway Configuration](docs/05-nat-gateway.md)
 6. [EC2 Instances in Public and Private Subnets](docs/06-ec2-in-vpc.md)
+7. [EC2 User Data and Apache Automation](docs/07-ec2-user-data.md)
 
 Each section includes explanations of the networking concept, configuration details, implementation steps, traffic-flow explanations, and AWS Console screenshots.
 
@@ -430,7 +484,8 @@ aws-vpc-networking-basics/
 ├── LICENSE
 │
 ├── architecture/
-│   └── AWS-VPC-Subnet-Routing-Architecture.png
+│   ├── AWS-VPC-Subnet-Routing-Architecture.png
+│   └── AWS-VPC-EC2-NAT-Gateway-Architecture.png
 │
 ├── docs/
 │   ├── 01-vpc.md
@@ -438,7 +493,8 @@ aws-vpc-networking-basics/
 │   ├── 03-internet-gateway.md
 │   ├── 04-route-tables.md
 │   ├── 05-nat-gateway.md
-│   └── 06-ec2-in-vpc.md
+│   ├── 06-ec2-in-vpc.md
+│   └── 07-ec2-user-data.md
 │
 └── screenshots/
     ├── 01-vpc-configuration.png
@@ -465,7 +521,12 @@ aws-vpc-networking-basics/
     ├── 22-private-ec2-running.png
     ├── 23-private-ec2-ssh-via-public-ec2.png
     ├── 24-private-ec2-internet-test.png
-    └── 25-final-vpc-resource-map.png
+    ├── 25-final-vpc-resource-map.png
+    ├── 26-ec2-user-data-configuration.png
+    ├── 27-user-data-ec2-running.png
+    ├── 28-apache-service-running.png
+    ├── 29-user-data-localhost-test.png
+    └── 30-user-data-browser-test.png
 ```
 
 ---
@@ -493,6 +554,10 @@ Through this project, I gained hands-on experience with:
 - Accessing private resources through a public instance
 - Testing network connectivity
 - AWS VPC Resource Map
+- EC2 User Data and instance bootstrapping
+- Automated Apache installation
+- Automated server initialization using Bash
+- HTTP service validation using `curl`
 
 One of the key concepts demonstrated by this project is that simply naming a subnet **public** or **private** does not determine its networking behavior.
 
@@ -510,13 +575,15 @@ Private Subnet
 
 The private EC2 instance can therefore initiate outbound Internet connections without having a public IPv4 address or a direct Internet Gateway route.
 
+EC2 User Data additionally demonstrates how instance initialization tasks can be automated during launch instead of being performed manually after connecting to the server.
+
 ---
 
 ## 🧹 Resource Cleanup
 
 AWS resources created for hands-on practice should be removed after completing the lab when they are no longer required.
 
-Resources created in this project currently include:
+Resources created throughout this project currently include:
 
 - Custom VPC
 - Public subnet
@@ -526,7 +593,7 @@ Resources created in this project currently include:
 - Private route table
 - NAT Gateway
 - NAT Gateway public IP / Elastic IP resources where applicable
-- Public EC2 instance
+- Public EC2 instances
 - Private EC2 instance
 
 NAT Gateway and public IPv4 resources can incur charges, so temporary lab resources should not be left running unnecessarily.
