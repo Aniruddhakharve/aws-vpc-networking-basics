@@ -1,8 +1,8 @@
 # AWS VPC Networking Fundamentals
 
-A hands-on AWS networking project demonstrating the design, implementation, and testing of a custom Amazon VPC with public and private subnets, an Internet Gateway, custom route tables, a NAT Gateway, and EC2 instances deployed across the network.
+A hands-on AWS networking project demonstrating the design, implementation, and testing of a custom Amazon VPC with public and private subnets, an Internet Gateway, custom route tables, a NAT Gateway, EC2 instances deployed across the network, and Security Groups controlling EC2 traffic.
 
-This project was created to develop a practical understanding of AWS networking fundamentals, subnet routing, public and private EC2 connectivity, private subnet outbound Internet access through a NAT Gateway, and automated EC2 initialization using User Data.
+This project was created to develop a practical understanding of AWS networking fundamentals, subnet routing, public and private EC2 connectivity, private subnet outbound Internet access through a NAT Gateway, Security Groups, and automated EC2 initialization using User Data.
 
 ---
 
@@ -22,6 +22,7 @@ The network is deployed in the **Asia Pacific (Mumbai) `ap-south-1`** AWS Region
 - One custom private route table
 - One NAT Gateway for private subnet outbound Internet connectivity
 - EC2 instances deployed in the public and private subnets
+- Security Group controlling inbound and outbound traffic for the public Apache EC2 instance
 - EC2 User Data used to automate Apache web server configuration
 
 The public subnet uses a default route to the Internet Gateway.
@@ -51,6 +52,10 @@ The objective of this project is to gain hands-on experience with core AWS VPC n
 - Connecting to EC2 instances using SSH
 - Accessing a private EC2 instance through a public EC2 instance
 - Validating outbound Internet connectivity from a private EC2 instance
+- Configuring AWS Security Groups
+- Understanding inbound and outbound Security Group rules
+- Allowing HTTP traffic on TCP port `80`
+- Allowing SSH traffic on TCP port `22`
 - Automating EC2 initialization using User Data
 - Automatically installing and configuring Apache
 - Validating web server deployment using `curl` and a browser
@@ -72,6 +77,8 @@ The objective of this project is to gain hands-on experience with core AWS VPC n
 | Public EC2 | Public + Private IPv4 |
 | Private EC2 | Private IPv4 only |
 | Private EC2 Internet Access | NAT Gateway |
+| Public EC2 HTTP Access | TCP `80` |
+| Public EC2 SSH Access | TCP `22` |
 
 ---
 
@@ -249,6 +256,33 @@ Because the instance has no public IPv4 address, it was accessed through the pub
 
 ---
 
+### Security Groups
+
+A Security Group acts as a virtual firewall for the EC2 instance and controls inbound and outbound network traffic.
+
+The Security Group was configured for the public EC2 instance running Apache.
+
+The inbound rules allow:
+
+| Type | Protocol | Port | Source |
+|---|---|---:|---|
+| SSH | TCP | `22` | `0.0.0.0/0` |
+| HTTP | TCP | `80` | `0.0.0.0/0` |
+
+The outbound rule allows all IPv4 traffic:
+
+```text
+All traffic → 0.0.0.0/0
+```
+
+The HTTP rule allows external clients to reach the Apache web server on port `80`.
+
+The Security Group is a traffic-control layer attached to the EC2 instance and works together with the route table.
+
+[View Security Group implementation →](docs/08-security-groups.md)
+
+---
+
 ### EC2 User Data
 
 EC2 User Data was used to automate the initial configuration of a public EC2 instance.
@@ -357,6 +391,32 @@ This allows the private EC2 instance to initiate outbound Internet connections w
 
 ---
 
+### Internet → Public EC2 → Apache
+
+HTTP traffic to the Apache web server follows:
+
+```text
+Internet
+     ↓
+Internet Gateway
+     ↓
+Public Route Table
+     ↓
+Public Subnet
+     ↓
+Security Group
+     ↓
+TCP : 80
+     ↓
+Public EC2
+     ↓
+Apache Web Server
+```
+
+The Security Group determines whether the incoming HTTP traffic is allowed to reach the EC2 instance.
+
+---
+
 ## 🔐 Private EC2 Access
 
 The private EC2 instance was not accessed directly from the Internet.
@@ -449,6 +509,44 @@ This confirms that the User Data script successfully installed Apache and genera
 
 ---
 
+### Security Group Configuration
+
+The public Apache EC2 instance was configured with a Security Group controlling its network access.
+
+The Security Group configuration was reviewed:
+
+![Security Group Configuration](screenshots/31-security-group-configuration.png)
+
+HTTP traffic on TCP port `80` was allowed through the inbound rules:
+
+![Security Group Inbound HTTP](screenshots/32-security-group-inbound-http.png)
+
+The outbound rules were also reviewed:
+
+![Security Group Outbound Rules](screenshots/33-security-group-outbound-rules.png)
+
+The resulting HTTP access path is:
+
+```text
+Internet
+     ↓
+Internet Gateway
+     ↓
+Public Route Table
+     ↓
+Public Subnet
+     ↓
+Security Group
+     ↓
+TCP : 80
+     ↓
+EC2
+     ↓
+Apache
+```
+
+---
+
 ## 📸 Final AWS Resource Map
 
 The AWS VPC Resource Map below shows the updated networking relationships after adding the NAT Gateway and extending the VPC architecture.
@@ -470,6 +568,7 @@ Detailed step-by-step documentation is available for each part of the project:
 5. [NAT Gateway Configuration](docs/05-nat-gateway.md)
 6. [EC2 Instances in Public and Private Subnets](docs/06-ec2-in-vpc.md)
 7. [EC2 User Data and Apache Automation](docs/07-ec2-user-data.md)
+8. [Security Groups](docs/08-security-groups.md)
 
 Each section includes explanations of the networking concept, configuration details, implementation steps, traffic-flow explanations, and AWS Console screenshots.
 
@@ -494,7 +593,8 @@ aws-vpc-networking-basics/
 │   ├── 04-route-tables.md
 │   ├── 05-nat-gateway.md
 │   ├── 06-ec2-in-vpc.md
-│   └── 07-ec2-user-data.md
+│   ├── 07-ec2-user-data.md
+│   └── 08-security-groups.md
 │
 └── screenshots/
     ├── 01-vpc-configuration.png
@@ -526,7 +626,10 @@ aws-vpc-networking-basics/
     ├── 27-user-data-ec2-running.png
     ├── 28-apache-service-running.png
     ├── 29-user-data-localhost-test.png
-    └── 30-user-data-browser-test.png
+    ├── 30-user-data-browser-test.png
+    ├── 31-security-group-configuration.png
+    ├── 32-security-group-inbound-http.png
+    └── 33-security-group-outbound-rules.png
 ```
 
 ---
@@ -554,6 +657,13 @@ Through this project, I gained hands-on experience with:
 - Accessing private resources through a public instance
 - Testing network connectivity
 - AWS VPC Resource Map
+- AWS Security Groups
+- Security Group inbound rules
+- Security Group outbound rules
+- Stateful Security Groups
+- HTTP access on TCP port `80`
+- SSH access on TCP port `22`
+- Security Groups vs. route tables
 - EC2 User Data and instance bootstrapping
 - Automated Apache installation
 - Automated server initialization using Bash
@@ -563,12 +673,22 @@ One of the key concepts demonstrated by this project is that simply naming a sub
 
 Routing and resource configuration determine how resources communicate.
 
+Security Groups provide an additional traffic-control layer at the resource level.
+
 In this architecture:
 
 ```text
 Public Subnet
 0.0.0.0/0 → Internet Gateway
+       ↓
+Security Group
+       ↓
+TCP 80 → Apache
+```
 
+while:
+
+```text
 Private Subnet
 0.0.0.0/0 → NAT Gateway
 ```
@@ -595,6 +715,7 @@ Resources created throughout this project currently include:
 - NAT Gateway public IP / Elastic IP resources where applicable
 - Public EC2 instances
 - Private EC2 instance
+- Security Groups
 
 NAT Gateway and public IPv4 resources can incur charges, so temporary lab resources should not be left running unnecessarily.
 
@@ -607,5 +728,7 @@ This project is intended for educational and hands-on AWS networking practice.
 The architecture focuses on understanding AWS VPC networking concepts and is **not intended to represent a complete production environment**.
 
 The VPC CIDR `31.0.0.0/16` follows the addressing used during the training lab. For real-world private VPC designs, RFC 1918 private address ranges such as `10.0.0.0/8`, `172.16.0.0/12`, or `192.168.0.0/16` would normally be used.
+
+The Security Group configuration used in this lab allows SSH and HTTP from `0.0.0.0/0` for learning and testing purposes. Restricting administrative access to trusted source addresses or using managed access mechanisms is preferable in production environments.
 
 The project will continue to evolve as additional AWS networking concepts are implemented.
