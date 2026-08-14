@@ -1,8 +1,6 @@
 # AWS VPC Networking Fundamentals
 
-A hands-on AWS networking project demonstrating the design, implementation, and testing of a custom Amazon VPC with public and private subnets, an Internet Gateway, custom route tables, a NAT Gateway, EC2 instances deployed across the network, Security Groups, and an Application Load Balancer with Target Groups.
-
-This project was created to develop a practical understanding of AWS networking fundamentals, subnet routing, public and private EC2 connectivity, private subnet outbound Internet access through a NAT Gateway, Security Groups, automated EC2 initialization using User Data, and distributing HTTP traffic through an Application Load Balancer.
+A hands-on AWS networking project demonstrating the design, implementation, and testing of a custom Amazon VPC with public and private subnets, an Internet Gateway, custom route tables, a NAT Gateway, EC2 instances deployed across the network, Security Groups, an Application Load Balancer with Target Groups, and VPC Peering between VPCs in different AWS Regions.
 
 ---
 
@@ -12,7 +10,7 @@ This project was created to develop a practical understanding of AWS networking 
 
 ### Architecture Overview
 
-The network is deployed in the **Asia Pacific (Mumbai) `ap-south-1`** AWS Region and currently consists of:
+The primary network is deployed in the **Asia Pacific (Mumbai) `ap-south-1`** AWS Region and currently consists of:
 
 - One custom VPC with CIDR block `31.0.0.0/16`
 - One public subnet in `ap-south-1a`
@@ -38,6 +36,31 @@ The public EC2 instances can be accessed externally when the required network ac
 The private EC2 instance does not have a public IPv4 address and was accessed through the public EC2 instance using its private IPv4 address.
 
 The Application Load Balancer provides an internet-facing entry point for HTTP traffic and forwards requests to targets registered in the Target Group.
+
+### VPC Peering Extension
+
+A separate VPC Peering lab was also implemented between two VPCs in different AWS Regions:
+
+- Mumbai (`ap-south-1`)
+- N. Virginia (`us-east-1`)
+
+The Mumbai VPC uses:
+
+    31.0.0.0/16
+
+The N. Virginia VPC uses:
+
+    41.0.0.0/16
+
+The two VPCs were connected using a VPC Peering connection.
+
+An EC2 instance was launched in each VPC and private IPv4 connectivity was tested between the two instances.
+
+The initial connectivity test failed because the required routes were not present in the route tables.
+
+After adding routes for the remote VPC CIDR through the VPC Peering connection on both sides, bidirectional private connectivity was successfully established.
+
+![AWS VPC Peering Architecture](architecture/AWS-VPC-Peering-Architecture.png)
 
 ---
 
@@ -76,10 +99,19 @@ The objective of this project is to gain hands-on experience with core AWS VPC n
 - Understanding healthy and unhealthy targets
 - Distributing HTTP traffic across multiple EC2 instances
 - Testing backend responses through an ALB DNS name
+- Creating VPC Peering connections
+- Understanding requester and accepter VPCs
+- Establishing VPC Peering between different AWS Regions
+- Configuring route tables for VPC Peering
+- Testing private connectivity between VPCs
+- Understanding bidirectional routing through a VPC Peering connection
+- Understanding VPC Peering limitations and non-transitive routing
 
 ---
 
 ## 🌐 Network Configuration
+
+### Primary VPC
 
 | Resource | Configuration |
 |---|---|
@@ -102,6 +134,17 @@ The objective of this project is to gain hands-on experience with core AWS VPC n
 | Target Group Protocol | HTTP |
 | Target Group Port | `80` |
 | Target Type | EC2 Instances |
+
+### VPC Peering Lab
+
+| Resource | Mumbai | N. Virginia |
+|---|---|---|
+| AWS Region | `ap-south-1` | `us-east-1` |
+| VPC CIDR | `31.0.0.0/16` | `41.0.0.0/16` |
+| Public Subnet | `31.0.1.0/24` | `41.0.1.0/24` |
+| EC2 Private IP | `31.0.1.139` | `41.0.1.223` |
+| VPC Peering | Connected | Connected |
+| Remote Route | `41.0.0.0/16 → Peering` | `31.0.0.0/16 → Peering` |
 
 ---
 
@@ -268,7 +311,7 @@ Example inbound rules used in the lab include:
 | Type | Protocol | Port | Source |
 |---|---|---:|---|
 | SSH | TCP | `22` | `0.0.0.0/0` |
-| HTTP | TCP | `80` | `0.0.0.0/0` |
+| HTTP | TCP | `80` | `0.0.0.0/0 |
 
 The outbound rule allows IPv4 traffic as configured in the lab.
 
@@ -363,6 +406,70 @@ The Target Group therefore demonstrates:
 The private EC2 instance was kept in the Target Group to demonstrate target health behavior in the lab.
 
 [View Application Load Balancer implementation →](docs/09-application-load-balancer.md)
+
+---
+
+### VPC Peering
+
+VPC Peering was implemented to establish private connectivity between two VPCs located in different AWS Regions.
+
+The two VPCs used in the lab were:
+
+    Mumbai
+    ap-south-1
+    31.0.0.0/16
+
+and:
+
+    N. Virginia
+    us-east-1
+    41.0.0.0/16
+
+The peering connection was created from the Mumbai VPC toward the N. Virginia VPC.
+
+The Mumbai VPC acted as the requester and the N. Virginia VPC acted as the accepter.
+
+After the peering request was accepted, the connection became active.
+
+However, the EC2 instances could not communicate immediately because VPC Peering does not automatically modify route tables.
+
+The following routes were therefore added:
+
+### Mumbai Route Table
+
+    Destination: 41.0.0.0/16
+    Target:      VPC Peering Connection
+
+### N. Virginia Route Table
+
+    Destination: 31.0.0.0/16
+    Target:      VPC Peering Connection
+
+After configuring both route tables, the EC2 instances were able to communicate using their private IPv4 addresses.
+
+The connectivity was verified in both directions:
+
+    Mumbai EC2
+    31.0.1.139
+         ↓
+    VPC Peering
+         ↓
+    N. Virginia EC2
+    41.0.1.223
+
+and:
+
+    N. Virginia EC2
+    41.0.1.223
+         ↓
+    VPC Peering
+         ↓
+    Mumbai EC2
+    31.0.1.139
+
+![AWS VPC Peering Architecture](architecture/AWS-VPC-Peering-Architecture.png)
+
+[View VPC Peering implementation →](docs/10-vpc-peering.md)
 
 ---
 
@@ -480,6 +587,42 @@ With two healthy public EC2 instances, the same ALB DNS name can serve responses
 
 ---
 
+### Mumbai VPC → VPC Peering → N. Virginia VPC
+
+The VPC Peering lab demonstrates cross-region private communication.
+
+Traffic from the Mumbai EC2 instance follows:
+
+    Mumbai EC2
+    31.0.1.139
+         ↓
+    Mumbai Route Table
+         ↓
+    41.0.0.0/16 → VPC Peering Connection
+         ↓
+    N. Virginia Route Table
+         ↓
+    N. Virginia EC2
+    41.0.1.223
+
+The reverse path follows:
+
+    N. Virginia EC2
+    41.0.1.223
+         ↓
+    N. Virginia Route Table
+         ↓
+    31.0.0.0/16 → VPC Peering Connection
+         ↓
+    Mumbai Route Table
+         ↓
+    Mumbai EC2
+    31.0.1.139
+
+The connectivity was tested using private IPv4 addresses rather than public IPv4 addresses.
+
+---
+
 ## 🔐 Private EC2 Access
 
 The private EC2 instance was not accessed directly from the Internet.
@@ -492,11 +635,11 @@ The access path was:
             ↓
            SSH
             ↓
-        Public EC2
+         Public EC2
             ↓
            SSH
             ↓
-        Private EC2
+         Private EC2
 
 The SSH private key was temporarily transferred to the public EC2 instance for the course lab and was **not committed to this repository**.
 
@@ -740,13 +883,121 @@ These tests demonstrate that the same ALB DNS name can serve responses from diff
 
 ---
 
+## 🔗 VPC Peering Validation
+
+### VPC Peering Request
+
+The VPC Peering request was created from the Mumbai VPC toward the N. Virginia VPC.
+
+![VPC Peering Request Configuration](screenshots/55-vpc-peering-request-configuration.png)
+
+---
+
+### Pending Acceptance
+
+The peering request initially appeared in the N. Virginia region with a pending acceptance status.
+
+![VPC Peering Pending Acceptance](screenshots/56-vpc-peering-pending-acceptance.png)
+
+---
+
+### Peering Request Accepted
+
+The peering request was accepted from the N. Virginia VPC.
+
+![VPC Peering Acceptance](screenshots/57-vpc-peering-acceptance.png)
+
+---
+
+### Peering Connection Active
+
+After acceptance, the VPC Peering connection became active.
+
+![VPC Peering Active](screenshots/58-vpc-peering-active.png)
+
+---
+
+### EC2 Instances in Both Regions
+
+An EC2 instance was launched in the Mumbai VPC:
+
+![Mumbai EC2 Network Configuration](screenshots/59-mumbai-ec2-network-configuration.png)
+
+An EC2 instance was also launched in the N. Virginia VPC:
+
+![N. Virginia EC2 Network Configuration](screenshots/60-virginia-ec2-network-configuration.png)
+
+Both instances successfully reached the Running state:
+
+![Mumbai EC2 Running](screenshots/61-mumbai-ec2-running.png)
+
+![N. Virginia EC2 Running](screenshots/62-virginia-ec2-running.png)
+
+---
+
+### Connectivity Test Before Routes
+
+Before adding the VPC Peering routes, the Mumbai EC2 instance attempted to ping the private IP address of the N. Virginia EC2 instance.
+
+The ping failed because the route tables did not yet contain routes toward the remote VPC CIDR.
+
+![Mumbai to N. Virginia Ping Failed](screenshots/63-mumbai-to-virginia-ping-failed.png)
+
+This demonstrated that an active VPC Peering connection alone does not automatically provide routing between the VPCs.
+
+---
+
+### Mumbai Route Table Peering Route
+
+The Mumbai route table was updated with a route for the N. Virginia VPC:
+
+    Destination: 41.0.0.0/16
+    Target:      VPC Peering Connection
+
+![Mumbai Route Table Peering Route](screenshots/64-mumbai-route-table-peering-route.png)
+
+---
+
+### N. Virginia Route Table Peering Route
+
+The N. Virginia route table was updated with a route for the Mumbai VPC:
+
+    Destination: 31.0.0.0/16
+    Target:      VPC Peering Connection
+
+![N. Virginia Route Table Peering Route](screenshots/65-virginia-route-table-peering-route.png)
+
+---
+
+### Mumbai → N. Virginia Connectivity
+
+After configuring the routes, the Mumbai EC2 instance successfully pinged the private IP of the N. Virginia EC2 instance.
+
+![Mumbai to N. Virginia Ping Success](screenshots/66-mumbai-to-virginia-ping-success.png)
+
+This confirmed that traffic from the Mumbai VPC could reach the N. Virginia VPC through the VPC Peering connection.
+
+---
+
+### N. Virginia → Mumbai Connectivity
+
+The reverse direction was also tested.
+
+The N. Virginia EC2 instance successfully pinged the private IP of the Mumbai EC2 instance.
+
+![N. Virginia to Mumbai Ping Success](screenshots/67-virginia-to-mumbai-ping-success.png)
+
+This confirmed that communication was working in both directions.
+
+---
+
 ## 📸 Final AWS Resource Map
 
 The AWS VPC Resource Map below shows the networking relationships after adding the NAT Gateway and deploying the EC2 instances.
 
 ![AWS VPC Resource Map](screenshots/25-final-vpc-resource-map.png)
 
-The architecture now includes:
+The primary Mumbai architecture includes:
 
     VPC: 31.0.0.0/16
     │
@@ -765,6 +1016,16 @@ The architecture now includes:
 
 The Application Load Balancer and Target Group provide the application entry point and backend target layer above this VPC architecture.
 
+The VPC Peering lab extends the networking concepts into another AWS Region:
+
+    Mumbai VPC
+    31.0.0.0/16
+         |
+         | VPC Peering
+         |
+    N. Virginia VPC
+    41.0.0.0/16
+
 ---
 
 ## 📚 Detailed Implementation
@@ -780,6 +1041,7 @@ Detailed step-by-step documentation is available for each part of the project:
 7. [EC2 User Data and Apache Automation](docs/07-ec2-user-data.md)
 8. [Security Groups](docs/08-security-groups.md)
 9. [Application Load Balancer and Target Groups](docs/09-application-load-balancer.md)
+10. [VPC Peering](docs/10-vpc-peering.md)
 
 Each section includes explanations of the networking concept, configuration details, implementation steps, traffic-flow explanations, validation, and AWS Console screenshots.
 
@@ -794,7 +1056,9 @@ Each section includes explanations of the networking concept, configuration deta
     │
     ├── architecture/
     │   ├── AWS-VPC-Subnet-Routing-Architecture.png
-    │   └── AWS-VPC-EC2-NAT-Gateway-Architecture.png
+    │   ├── AWS-VPC-EC2-NAT-Gateway-Architecture.png
+    │   ├── AWS-VPC-EC2-ALB-Architecture.png
+    │   └── AWS-VPC-Peering-Architecture.png
     │
     ├── docs/
     │   ├── 01-vpc.md
@@ -805,7 +1069,8 @@ Each section includes explanations of the networking concept, configuration deta
     │   ├── 06-ec2-in-vpc.md
     │   ├── 07-ec2-user-data.md
     │   ├── 08-security-groups.md
-    │   └── 09-application-load-balancer.md
+    │   ├── 09-application-load-balancer.md
+    │   └── 10-vpc-peering.md
     │
     └── screenshots/
         ├── 01-vpc-configuration.png
@@ -856,7 +1121,25 @@ Each section includes explanations of the networking concept, configuration deta
         ├── 46-target-group-two-public-ec2.png
         ├── 47-target-group-final-health-status.png
         ├── 48-alb-backend-response-1.png
-        └── 49-alb-backend-response-2.png
+        ├── 49-alb-backend-response-2.png
+        ├── 50-virginia-vpc-configuration.png
+        ├── 51-virginia-public-subnet-configuration.png
+        ├── 52-virginia-private-subnet-configuration.png
+        ├── 53-virginia-internet-gateway.png
+        ├── 54-virginia-route-table-configuration.png
+        ├── 55-vpc-peering-request-configuration.png
+        ├── 56-vpc-peering-pending-acceptance.png
+        ├── 57-vpc-peering-acceptance.png
+        ├── 58-vpc-peering-active.png
+        ├── 59-mumbai-ec2-network-configuration.png
+        ├── 60-virginia-ec2-network-configuration.png
+        ├── 61-mumbai-ec2-running.png
+        ├── 62-virginia-ec2-running.png
+        ├── 63-mumbai-to-virginia-ping-failed.png
+        ├── 64-mumbai-route-table-peering-route.png
+        ├── 65-virginia-route-table-peering-route.png
+        ├── 66-mumbai-to-virginia-ping-success.png
+        └── 67-virginia-to-mumbai-ping-success.png
 
 ---
 
@@ -905,6 +1188,15 @@ Through this project, I gained hands-on experience with:
 - Load balancing across multiple EC2 instances
 - ALB DNS names
 - Backend response validation
+- VPC Peering
+- Cross-region VPC connectivity
+- VPC Peering requester and accepter concepts
+- VPC Peering connection states
+- Cross-region private IPv4 communication
+- Route-table configuration for VPC Peering
+- Bidirectional VPC Peering connectivity
+- VPC Peering limitations
+- Non-transitive VPC routing
 
 One of the key concepts demonstrated by this project is that simply naming a subnet **public** or **private** does not determine its networking behavior.
 
@@ -932,6 +1224,8 @@ EC2 User Data additionally demonstrates how instance initialization tasks can be
 
 The Application Load Balancer demonstrates how a single internet-facing endpoint can distribute HTTP requests across multiple healthy backend EC2 instances.
 
+VPC Peering additionally demonstrates how two VPCs in different AWS Regions can communicate privately when the peering connection is active and the appropriate routes are configured on both sides.
+
 ---
 
 ## 🧹 Resource Cleanup
@@ -953,8 +1247,11 @@ Resources created throughout this project currently include:
 - Security Groups
 - Target Group
 - Application Load Balancer
+- VPC Peering connection
+- Additional VPC and networking resources used in the N. Virginia VPC Peering lab
+- EC2 instances used for cross-region VPC connectivity testing
 
-NAT Gateway, public IPv4 resources, and other running AWS resources can incur charges, so temporary lab resources should not be left running unnecessarily.
+NAT Gateway, public IPv4 resources, EC2 instances, and other running AWS resources can incur charges, so temporary lab resources should not be left running unnecessarily.
 
 ---
 
@@ -969,5 +1266,7 @@ The VPC CIDR `31.0.0.0/16` follows the addressing used during the training lab. 
 The Security Group configuration used in this lab allows SSH and HTTP from `0.0.0.0/0` for learning and testing purposes. Restricting administrative access to trusted source addresses or using managed access mechanisms is preferable in production environments.
 
 The Application Load Balancer and Target Group configuration in this project is also intended for learning and demonstration purposes.
+
+The VPC Peering configuration is also intended for learning and demonstration purposes. VPC Peering is a one-to-one connection and does not provide transitive routing between multiple VPCs.
 
 The project will continue to evolve as additional AWS networking concepts are implemented.
