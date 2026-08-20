@@ -1,6 +1,6 @@
 # AWS VPC Networking Fundamentals
 
-A hands-on AWS networking project demonstrating the design, implementation, and testing of a custom Amazon VPC with public and private subnets, an Internet Gateway, custom route tables, a NAT Gateway, EC2 instances deployed across the network, Security Groups, an Application Load Balancer with Target Groups, and VPC Peering between VPCs in different AWS Regions.
+A hands-on AWS networking project demonstrating the design, implementation, and validation of core Amazon VPC networking concepts, including public and private subnets, Internet Gateway, route tables, NAT Gateway, EC2, Security Groups, EC2 User Data, Application Load Balancer, Target Groups, VPC Peering, and AWS Transit Gateway.
 
 ---
 
@@ -10,102 +10,141 @@ A hands-on AWS networking project demonstrating the design, implementation, and 
 
 ### Architecture Overview
 
-The primary network is deployed in the **Asia Pacific (Mumbai) `ap-south-1`** AWS Region and currently consists of:
+The primary network is deployed in the **Asia Pacific (Mumbai) `ap-south-1`** AWS Region.
 
-- One custom VPC with CIDR block `31.0.0.0/16`
+The architecture includes:
+
+- One custom VPC — `31.0.0.0/16`
 - One public subnet in `ap-south-1a`
 - One private subnet in `ap-south-1b`
-- One Internet Gateway attached to the VPC
-- One custom public route table
-- One custom private route table
-- One NAT Gateway for private subnet outbound Internet connectivity
+- One Internet Gateway
+- One public route table
+- One private route table
+- One NAT Gateway
 - Two public EC2 instances
 - One private EC2 instance
-- Security Groups controlling EC2 and ALB traffic
-- EC2 User Data used to automate Apache web server configuration
+- Security Groups
+- EC2 User Data
+- Apache web servers
 - One internet-facing Application Load Balancer
-- One Target Group containing the EC2 instances
-- HTTP listener on port `80`
+- One Target Group
 
 The public subnet uses a default route to the Internet Gateway.
 
-The private subnet does **not** have a direct route to the Internet Gateway. Instead, Internet-bound traffic from the private subnet is sent to the NAT Gateway.
-
-The public EC2 instances can be accessed externally when the required network access configuration is present.
+The private subnet uses a default route to the NAT Gateway for outbound Internet connectivity.
 
 The private EC2 instance does not have a public IPv4 address and was accessed through the public EC2 instance using its private IPv4 address.
 
-The Application Load Balancer provides an internet-facing entry point for HTTP traffic and forwards requests to targets registered in the Target Group.
+The Application Load Balancer provides an internet-facing entry point and forwards HTTP traffic to healthy backend EC2 instances registered with the Target Group.
 
 ### VPC Peering Extension
 
-A separate VPC Peering lab was also implemented between two VPCs in different AWS Regions:
+A separate VPC Peering lab was implemented between:
 
-- Mumbai (`ap-south-1`)
-- N. Virginia (`us-east-1`)
+- Mumbai — `ap-south-1`
+- N. Virginia — `us-east-1`
 
 The Mumbai VPC uses:
 
-    31.0.0.0/16
+```text
+31.0.0.0/16
+```
 
 The N. Virginia VPC uses:
 
-    41.0.0.0/16
+```text
+41.0.0.0/16
+```
 
 The two VPCs were connected using a VPC Peering connection.
 
-An EC2 instance was launched in each VPC and private IPv4 connectivity was tested between the two instances.
-
-The initial connectivity test failed because the required routes were not present in the route tables.
-
-After adding routes for the remote VPC CIDR through the VPC Peering connection on both sides, bidirectional private connectivity was successfully established.
+Private IPv4 connectivity was tested between EC2 instances in both VPCs.
 
 ![AWS VPC Peering Architecture](architecture/AWS-VPC-Peering-Architecture.png)
+
+### Transit Gateway Extension
+
+A separate Transit Gateway lab was implemented to connect three VPCs through a centralized AWS Transit Gateway.
+
+The three VPCs are:
+
+```text
+AWS Course VPC
+31.0.0.0/16
+
+Demo Course VPC
+71.0.0.0/16
+
+Redshift VPC
+10.0.0.0/16
+```
+
+Each VPC was connected to the Transit Gateway using a dedicated VPC attachment.
+
+The required remote VPC routes were then configured in the VPC route tables.
+
+![AWS Transit Gateway Architecture](architecture/AWS-VPC-Transit-Gateway-Architecture.png)
 
 ---
 
 ## 🎯 Project Objectives
 
-The objective of this project is to gain hands-on experience with core AWS VPC networking concepts, including:
+The objective of this project is to gain hands-on experience with:
 
-- Creating a custom Amazon VPC
-- Understanding IPv4 CIDR blocks
-- Creating public and private subnets
-- Deploying subnets across Availability Zones
-- Creating and attaching an Internet Gateway
-- Creating custom route tables
-- Configuring public Internet routing
-- Associating route tables with subnets
-- Creating and configuring a NAT Gateway
-- Providing outbound Internet connectivity to a private subnet
-- Launching EC2 instances into specific VPC subnets
-- Understanding public and private IPv4 addressing
-- Connecting to EC2 instances using SSH
-- Accessing a private EC2 instance through a public EC2 instance
-- Validating outbound Internet connectivity from a private EC2 instance
-- Configuring AWS Security Groups
-- Understanding inbound and outbound Security Group rules
-- Allowing HTTP traffic on TCP port `80`
-- Allowing SSH traffic on TCP port `22`
-- Automating EC2 initialization using User Data
-- Automatically installing and configuring Apache
-- Validating web server deployment using `curl` and a browser
-- Creating Target Groups
-- Registering EC2 instances as Target Group targets
-- Configuring Application Load Balancers
-- Configuring HTTP listeners
-- Configuring ALB forwarding rules
-- Understanding Target Group health checks
-- Understanding healthy and unhealthy targets
-- Distributing HTTP traffic across multiple EC2 instances
-- Testing backend responses through an ALB DNS name
-- Creating VPC Peering connections
-- Understanding requester and accepter VPCs
-- Establishing VPC Peering between different AWS Regions
-- Configuring route tables for VPC Peering
-- Testing private connectivity between VPCs
-- Understanding bidirectional routing through a VPC Peering connection
-- Understanding VPC Peering limitations and non-transitive routing
+- Amazon VPC architecture
+- IPv4 CIDR addressing
+- Public and private subnet design
+- Availability Zones
+- Internet Gateways
+- AWS route tables
+- Local VPC routing
+- Default routes
+- Longest prefix matching
+- Subnet-to-route-table associations
+- NAT Gateway configuration
+- Private subnet outbound Internet connectivity
+- Public and private EC2 deployment
+- Public and private IPv4 addressing
+- SSH connectivity
+- Accessing private resources through a public instance
+- Network connectivity testing
+- AWS VPC Resource Map
+- AWS Security Groups
+- Security Group inbound and outbound rules
+- HTTP access on TCP port `80`
+- SSH access on TCP port `22`
+- EC2 User Data
+- Automated Apache installation
+- Automated server initialization using Bash
+- HTTP validation using `curl`
+- Application Load Balancers
+- Target Groups
+- EC2 target registration
+- ALB listeners
+- ALB security groups
+- Target health checks
+- Healthy and unhealthy targets
+- Load balancing across multiple EC2 instances
+- ALB DNS names
+- Backend response validation
+- VPC Peering
+- Cross-region VPC connectivity
+- VPC Peering requester and accepter concepts
+- VPC Peering connection states
+- Cross-region private IPv4 communication
+- Route-table configuration for VPC Peering
+- Bidirectional VPC Peering connectivity
+- VPC Peering limitations
+- Non-transitive VPC routing
+- AWS Transit Gateway
+- Transit Gateway VPC attachments
+- Centralized connectivity between multiple VPCs
+- Transit Gateway route-table configuration
+- Private IPv4 communication through Transit Gateway
+- Transit Gateway connectivity validation
+- Negative connectivity testing
+- Transit Gateway routing dependencies
+- VPC Peering vs. Transit Gateway architecture
 
 ---
 
@@ -142,9 +181,28 @@ The objective of this project is to gain hands-on experience with core AWS VPC n
 | AWS Region | `ap-south-1` | `us-east-1` |
 | VPC CIDR | `31.0.0.0/16` | `41.0.0.0/16` |
 | Public Subnet | `31.0.1.0/24` | `41.0.1.0/24` |
-| EC2 Private IP | `31.0.1.139` | `41.0.1.223` |
 | VPC Peering | Connected | Connected |
 | Remote Route | `41.0.0.0/16 → Peering` | `31.0.0.0/16 → Peering` |
+
+### Transit Gateway Lab
+
+| Resource | AWS Course VPC | Demo Course VPC | Redshift VPC |
+|---|---|---|---|
+| VPC CIDR | `31.0.0.0/16` | `71.0.0.0/16` | `10.0.0.0/16` |
+| Transit Gateway Attachment | Attached | Attached | Attached |
+| EC2 | Deployed | Deployed | Deployed |
+| Remote VPC Routing | Through TGW | Through TGW | Through TGW |
+
+The three VPCs are connected through one centralized Transit Gateway:
+
+```text
+AWS Transit Gateway
+   /      |      \
+  /       |       \
+ /        |        \
+AWS Course  Demo Course  Redshift
+31.0.0.0/16 71.0.0.0/16 10.0.0.0/16
+```
 
 ---
 
@@ -162,23 +220,31 @@ The VPC provides a logically isolated virtual network in AWS where networking re
 
 ### Public and Private Subnets
 
-The VPC is divided into two subnets.
+The primary VPC is divided into public and private subnets.
 
 #### Public Subnet
 
-    CIDR: 31.0.1.0/24
-    Availability Zone: ap-south-1a
+```text
+CIDR: 31.0.1.0/24
+Availability Zone: ap-south-1a
+```
 
-The public subnet is associated with a route table containing a default route to the Internet Gateway.
+The public subnet is associated with a route table containing:
+
+```text
+0.0.0.0/0 → Internet Gateway
+```
 
 #### Private Subnet
 
-    CIDR: 31.0.2.0/24
-    Availability Zone: ap-south-1b
+```text
+CIDR: 31.0.2.0/24
+Availability Zone: ap-south-1b
+```
 
 The private subnet does not have a direct route to the Internet Gateway.
 
-Instead, its default route points to the NAT Gateway for outbound Internet connectivity.
+Its default route points to the NAT Gateway for outbound Internet connectivity.
 
 [View subnet implementation →](docs/02-subnets.md)
 
@@ -186,13 +252,15 @@ Instead, its default route points to the NAT Gateway for outbound Internet conne
 
 ### Internet Gateway
 
-An Internet Gateway is created and attached to the VPC to provide a path between the VPC and the Internet.
+An Internet Gateway was created and attached to the VPC to provide a path between the VPC and the Internet.
 
 Attaching an Internet Gateway to a VPC alone does not automatically make a subnet public.
 
-The public subnet must use a route table containing:
+The public subnet requires:
 
-    0.0.0.0/0 → Internet Gateway
+```text
+0.0.0.0/0 → Internet Gateway
+```
 
 [View Internet Gateway implementation →](docs/03-internet-gateway.md)
 
@@ -200,7 +268,7 @@ The public subnet must use a route table containing:
 
 ### Route Tables
 
-Two custom route tables are used to provide different routing behavior for the public and private subnets.
+Two custom route tables were used.
 
 #### Public Route Table
 
@@ -211,13 +279,11 @@ Two custom route tables are used to provide different routing behavior for the p
 
 Associated with:
 
-    31.0.1.0/24 — Public Subnet
+```text
+31.0.1.0/24 — Public Subnet
+```
 
 #### Private Route Table
-
-The private route table was initially created with only the VPC local route.
-
-After introducing the NAT Gateway, it was extended to:
 
 | Destination | Target |
 |---|---|
@@ -226,9 +292,11 @@ After introducing the NAT Gateway, it was extended to:
 
 Associated with:
 
-    31.0.2.0/24 — Private Subnet
+```text
+31.0.2.0/24 — Private Subnet
+```
 
-The private subnet therefore has outbound Internet connectivity without receiving a direct route to the Internet Gateway.
+The private subnet therefore has outbound Internet connectivity without having a direct route to the Internet Gateway.
 
 [View route table implementation →](docs/04-route-tables.md)
 
@@ -240,21 +308,25 @@ A NAT Gateway provides outbound Internet connectivity for resources deployed ins
 
 The private route table contains:
 
-    0.0.0.0/0 → NAT Gateway
+```text
+0.0.0.0/0 → NAT Gateway
+```
 
-Internet-bound traffic from the private subnet therefore follows:
+The traffic flow is:
 
-    Private Resource
-           ↓
-    Private Route Table
-           ↓
-    NAT Gateway
-           ↓
-    Internet Gateway
-           ↓
-    Internet
+```text
+Private EC2
+     ↓
+Private Route Table
+     ↓
+NAT Gateway
+     ↓
+Internet Gateway
+     ↓
+Internet
+```
 
-This allows a private EC2 instance to initiate connections to the Internet without requiring its own public IPv4 address.
+This allows the private EC2 instance to initiate outbound Internet connections without requiring its own public IPv4 address.
 
 [View NAT Gateway implementation →](docs/05-nat-gateway.md)
 
@@ -262,35 +334,31 @@ This allows a private EC2 instance to initiate connections to the Internet witho
 
 ### EC2 Instances in the VPC
 
-EC2 instances were deployed to validate the public and private subnet networking architecture.
+EC2 instances were deployed to validate the public and private subnet architecture.
 
 #### Public EC2 Instances
 
-Two EC2 instances were deployed inside:
+Two EC2 instances were deployed in:
 
-    Public Subnet
-    31.0.1.0/24
-
-Both public instances have:
-
-    Private IPv4: Assigned inside the VPC
-    Public IPv4:  Assigned by AWS
+```text
+Public Subnet
+31.0.1.0/24
+```
 
 The public EC2 instances run Apache and are used as backend targets for the Application Load Balancer.
 
 #### Private EC2
 
-The private EC2 instance was deployed inside:
+The private EC2 instance was deployed in:
 
-    Private Subnet
-    31.0.2.0/24
+```text
+Private Subnet
+31.0.2.0/24
+```
 
-It has:
+It has no public IPv4 address.
 
-    Private IPv4: Assigned inside the VPC
-    Public IPv4:  None
-
-Because the instance has no public IPv4 address, it was accessed through the public EC2 instance using VPC local routing.
+The private EC2 instance was accessed through the public EC2 instance using its private IPv4 address.
 
 [View EC2 implementation →](docs/06-ec2-in-vpc.md)
 
@@ -298,26 +366,20 @@ Because the instance has no public IPv4 address, it was accessed through the pub
 
 ### Security Groups
 
-A Security Group acts as a virtual firewall for AWS resources and controls inbound and outbound network traffic.
+Security Groups act as virtual firewalls for AWS resources and control inbound and outbound traffic.
 
-Security Groups were used for the EC2 instances and Application Load Balancer.
+The lab used Security Groups for the EC2 instances and Application Load Balancer.
 
-The public Apache EC2 instances require HTTP access on port `80`.
-
-SSH access on port `22` was also configured for the hands-on lab.
-
-Example inbound rules used in the lab include:
+Example inbound rules used during the lab:
 
 | Type | Protocol | Port | Source |
 |---|---|---:|---|
 | SSH | TCP | `22` | `0.0.0.0/0` |
-| HTTP | TCP | `80` | `0.0.0.0/0 |
+| HTTP | TCP | `80` | `0.0.0.0/0` |
 
-The outbound rule allows IPv4 traffic as configured in the lab.
+The HTTP rule allows external clients to reach Apache on port `80`.
 
-The HTTP rule allows external clients to reach the Apache web server on port `80`.
-
-The Security Group is a traffic-control layer attached to the resource and works together with route tables.
+The SSH rule allows administrative access during the lab.
 
 [View Security Group implementation →](docs/08-security-groups.md)
 
@@ -325,25 +387,29 @@ The Security Group is a traffic-control layer attached to the resource and works
 
 ### EC2 User Data
 
-EC2 User Data was used to automate the initial configuration of public EC2 instances.
+EC2 User Data was used to automate the initial configuration of the public EC2 instances.
 
-A Bash script was supplied during instance launch to automatically:
+The Bash script was used to:
 
 - Update the package repository
 - Install Apache
-- Generate a custom HTML web page
+- Generate a custom HTML page
 - Display the instance hostname and private IPv4 address
 - Restart the Apache service
 
-The deployment was validated by checking the Apache service:
+Apache was verified using:
 
-    sudo systemctl status apache2
+```bash
+sudo systemctl status apache2
+```
 
-The web server was then tested locally using:
+The web server was tested locally using:
 
-    curl localhost
+```bash
+curl localhost
+```
 
-Finally, the instance's public IPv4 address was opened in a web browser to verify that Apache was serving the generated page externally.
+The public IPv4 address was then opened in a browser to validate external HTTP access.
 
 [View EC2 User Data implementation →](docs/07-ec2-user-data.md)
 
@@ -355,24 +421,30 @@ An **Application Load Balancer (ALB)** was introduced to provide an internet-fac
 
 The ALB was configured with:
 
-    Scheme   : Internet-facing
-    IP Type  : IPv4
-    Protocol : HTTP
-    Port     : 80
+```text
+Scheme   : Internet-facing
+IP Type  : IPv4
+Protocol : HTTP
+Port     : 80
+```
 
-The ALB receives HTTP requests from users and forwards them to targets registered in the Target Group.
+The ALB receives HTTP requests and forwards them to targets registered in the Target Group.
 
-The traffic flow is:
+Traffic flows as:
 
-    Internet User
-          ↓
-    Application Load Balancer
-          ↓
-    Target Group
-          ↓
-    Healthy EC2 Target
-
-The ALB uses its listener configuration and target health information to route requests to healthy registered targets.
+```text
+Internet User
+      ↓
+Application Load Balancer
+      ↓
+HTTP Listener : 80
+      ↓
+Target Group
+      ↓
+Healthy EC2 Target
+      ↓
+Apache
+```
 
 ---
 
@@ -382,28 +454,32 @@ A Target Group provides a logical grouping of backend resources for the Applicat
 
 The Target Group was configured with:
 
-    Target Type : Instances
-    Protocol    : HTTP
-    Port        : 80
-    Health Path : /
+```text
+Target Type : Instances
+Protocol    : HTTP
+Port        : 80
+Health Path : /
+```
 
-The Target Group uses the existing custom VPC.
+The Target Group initially contained the existing EC2 instances.
 
-The lab initially registered the existing public and private EC2 instances.
+A second public EC2 instance was later added to demonstrate load balancing across multiple healthy backend targets.
 
-A second public EC2 instance was later added so that the load-balancing behavior could be demonstrated with two healthy public targets.
+The final Target Group contained:
 
-The Target Group therefore demonstrates:
+```text
+Target Group
+     |
+     +── Public EC2 #1
+     |
+     +── Public EC2 #2
+     |
+     └── Private EC2
+```
 
-    Target Group
-         |
-         +── Public EC2 #1
-         |
-         +── Public EC2 #2
-         |
-         └── Private EC2 → Unhealthy
+The two public EC2 instances were healthy targets.
 
-The private EC2 instance was kept in the Target Group to demonstrate target health behavior in the lab.
+The private EC2 instance remained registered but was unhealthy in the lab.
 
 [View Application Load Balancer implementation →](docs/09-application-load-balancer.md)
 
@@ -413,19 +489,21 @@ The private EC2 instance was kept in the Target Group to demonstrate target heal
 
 VPC Peering was implemented to establish private connectivity between two VPCs located in different AWS Regions.
 
-The two VPCs used in the lab were:
+The VPCs were:
 
-    Mumbai
-    ap-south-1
-    31.0.0.0/16
+```text
+Mumbai
+ap-south-1
+31.0.0.0/16
+```
 
 and:
 
-    N. Virginia
-    us-east-1
-    41.0.0.0/16
-
-The peering connection was created from the Mumbai VPC toward the N. Virginia VPC.
+```text
+N. Virginia
+us-east-1
+41.0.0.0/16
+```
 
 The Mumbai VPC acted as the requester and the N. Virginia VPC acted as the accepter.
 
@@ -433,193 +511,294 @@ After the peering request was accepted, the connection became active.
 
 However, the EC2 instances could not communicate immediately because VPC Peering does not automatically modify route tables.
 
-The following routes were therefore added:
+The following routes were therefore added.
 
-### Mumbai Route Table
+#### Mumbai Route Table
 
-    Destination: 41.0.0.0/16
-    Target:      VPC Peering Connection
+```text
+Destination: 41.0.0.0/16
+Target:      VPC Peering Connection
+```
 
-### N. Virginia Route Table
+#### N. Virginia Route Table
 
-    Destination: 31.0.0.0/16
-    Target:      VPC Peering Connection
+```text
+Destination: 31.0.0.0/16
+Target:      VPC Peering Connection
+```
 
 After configuring both route tables, the EC2 instances were able to communicate using their private IPv4 addresses.
 
-The connectivity was verified in both directions:
-
-    Mumbai EC2
-    31.0.1.139
-         ↓
-    VPC Peering
-         ↓
-    N. Virginia EC2
-    41.0.1.223
-
-and:
-
-    N. Virginia EC2
-    41.0.1.223
-         ↓
-    VPC Peering
-         ↓
-    Mumbai EC2
-    31.0.1.139
-
-![AWS VPC Peering Architecture](architecture/AWS-VPC-Peering-Architecture.png)
+Connectivity was successfully tested in both directions.
 
 [View VPC Peering implementation →](docs/10-vpc-peering.md)
 
 ---
 
-## 🔄 Traffic Flow
+### Transit Gateway
 
-The completed architecture demonstrates several different networking paths.
+AWS Transit Gateway was implemented to connect three VPCs through a centralized networking hub.
+
+The three VPCs were:
+
+```text
+AWS Course VPC
+31.0.0.0/16
+
+Demo Course VPC
+71.0.0.0/16
+
+Redshift VPC
+10.0.0.0/16
+```
+
+A single Transit Gateway was created and used as the central connectivity point.
+
+```text
+AWS Transit Gateway
+   /      |      \
+  /       |       \
+ /        |        \
+AWS Course  Demo Course  Redshift
+31.0.0.0/16 71.0.0.0/16 10.0.0.0/16
+```
+
+Each VPC was connected to the Transit Gateway using a dedicated VPC attachment.
+
+The route tables were then configured with routes for the remote VPC CIDRs.
+
+#### AWS Course VPC
+
+```text
+71.0.0.0/16 → Transit Gateway
+10.0.0.0/16 → Transit Gateway
+```
+
+#### Demo Course VPC
+
+```text
+31.0.0.0/16 → Transit Gateway
+10.0.0.0/16 → Transit Gateway
+```
+
+#### Redshift VPC
+
+```text
+31.0.0.0/16 → Transit Gateway
+71.0.0.0/16 → Transit Gateway
+```
+
+EC2 instances were deployed in all three VPCs and private IPv4 connectivity was tested between them.
+
+A negative test was also performed by removing a required Transit Gateway route. Connectivity was then blocked, demonstrating that creating a Transit Gateway attachment alone does not automatically establish end-to-end VPC routing.
+
+[View Transit Gateway implementation →](docs/11-transit-gateway.md)
+
+---
+
+## 🔄 Traffic Flow
 
 ### Public EC2 → Internet
 
-Internet-bound traffic from the public EC2 instance follows:
-
-    Public EC2
-         ↓
-    Public Subnet
-         ↓
-    Public Route Table
-         ↓
-    0.0.0.0/0 → Internet Gateway
-         ↓
-    Internet
+```text
+Public EC2
+    ↓
+Public Subnet
+    ↓
+Public Route Table
+    ↓
+0.0.0.0/0 → Internet Gateway
+    ↓
+Internet
+```
 
 ---
 
 ### Public EC2 → Private EC2
 
-The private EC2 instance is accessed through the public EC2 instance.
-
-    Administrator
-         ↓
-        SSH
-         ↓
-    Public EC2
-    31.0.1.x
-         ↓
-    VPC Local Routing
-         ↓
-    Private EC2
-    31.0.2.x
+```text
+Administrator
+     ↓
+    SSH
+     ↓
+ Public EC2
+ 31.0.1.x
+     ↓
+VPC Local Routing
+     ↓
+ Private EC2
+ 31.0.2.x
+```
 
 Both addresses belong to:
 
-    31.0.0.0/16
+```text
+31.0.0.0/16
+```
 
-Therefore, the VPC local route provides the routing path between the two subnet networks.
+Therefore, the VPC local route provides connectivity between the subnets.
 
 ---
 
 ### Private EC2 → Internet
 
-The private EC2 instance does not have a public IPv4 address and does not have a direct Internet Gateway route.
+```text
+Private EC2
+31.0.2.x
+     ↓
+Private Subnet
+31.0.2.0/24
+     ↓
+Private Route Table
+     ↓
+0.0.0.0/0 → NAT Gateway
+     ↓
+NAT Gateway
+     ↓
+Internet Gateway
+     ↓
+Internet
+```
 
-Its outbound Internet traffic follows:
-
-    Private EC2
-    31.0.2.x
-         ↓
-    Private Subnet
-    31.0.2.0/24
-         ↓
-    Private Route Table
-         ↓
-    0.0.0.0/0 → NAT Gateway
-         ↓
-    NAT Gateway
-         ↓
-    Internet Gateway
-         ↓
-    Internet
-
-This allows the private EC2 instance to initiate outbound Internet connections while remaining without a public IPv4 address.
+The private EC2 instance can therefore initiate outbound Internet connections without a public IPv4 address.
 
 ---
 
 ### Internet → Public EC2 → Apache
 
-Direct HTTP traffic to an Apache web server follows:
-
-    Internet
-         ↓
-    Internet Gateway
-         ↓
-    Public Route Table
-         ↓
-    Public Subnet
-         ↓
-    Security Group
-         ↓
-    TCP : 80
-         ↓
-    Public EC2
-         ↓
-    Apache Web Server
-
-The Security Group determines whether the incoming HTTP traffic is allowed to reach the EC2 instance.
+```text
+Internet
+    ↓
+Internet Gateway
+    ↓
+Public Route Table
+    ↓
+Public Subnet
+    ↓
+Security Group
+    ↓
+TCP : 80
+    ↓
+Public EC2
+    ↓
+Apache Web Server
+```
 
 ---
 
 ### Internet → ALB → Target Group → EC2
 
-The Application Load Balancer introduces another HTTP traffic path:
+```text
+Internet User
+      ↓
+Application Load Balancer
+      ↓
+HTTP Listener : 80
+      ↓
+Target Group
+      ↓
+Healthy EC2 Target
+      ↓
+Apache
+```
 
-    Internet User
-         ↓
-    Application Load Balancer
-         ↓
-    HTTP Listener : 80
-         ↓
-    Target Group
-         ↓
-    Healthy EC2 Target
-         ↓
-    Apache
-
-With two healthy public EC2 instances, the same ALB DNS name can serve responses from different backend instances.
+With two healthy public EC2 instances, the same ALB DNS name can return responses from different backend instances.
 
 ---
 
 ### Mumbai VPC → VPC Peering → N. Virginia VPC
 
-The VPC Peering lab demonstrates cross-region private communication.
+```text
+Mumbai EC2
+31.0.1.x
+     ↓
+Mumbai Route Table
+     ↓
+41.0.0.0/16 → VPC Peering Connection
+     ↓
+N. Virginia Route Table
+     ↓
+N. Virginia EC2
+41.0.1.x
+```
 
-Traffic from the Mumbai EC2 instance follows:
+The reverse path was also tested:
 
-    Mumbai EC2
-    31.0.1.139
-         ↓
-    Mumbai Route Table
-         ↓
-    41.0.0.0/16 → VPC Peering Connection
-         ↓
-    N. Virginia Route Table
-         ↓
-    N. Virginia EC2
-    41.0.1.223
+```text
+N. Virginia EC2
+41.0.1.x
+     ↓
+N. Virginia Route Table
+     ↓
+31.0.0.0/16 → VPC Peering Connection
+     ↓
+Mumbai Route Table
+     ↓
+Mumbai EC2
+31.0.1.x
+```
 
-The reverse path follows:
+---
 
-    N. Virginia EC2
-    41.0.1.223
-         ↓
-    N. Virginia Route Table
-         ↓
-    31.0.0.0/16 → VPC Peering Connection
-         ↓
-    Mumbai Route Table
-         ↓
-    Mumbai EC2
-    31.0.1.139
+### AWS Course VPC → Transit Gateway → Demo Course VPC
 
-The connectivity was tested using private IPv4 addresses rather than public IPv4 addresses.
+```text
+AWS Course EC2
+31.0.0.0/16
+     ↓
+AWS Course Route Table
+     ↓
+71.0.0.0/16 → Transit Gateway
+     ↓
+AWS Transit Gateway
+     ↓
+Demo Course Route Table
+     ↓
+Demo Course EC2
+71.0.0.0/16
+```
+
+---
+
+### AWS Course VPC → Transit Gateway → Redshift VPC
+
+```text
+AWS Course EC2
+31.0.0.0/16
+     ↓
+AWS Course Route Table
+     ↓
+10.0.0.0/16 → Transit Gateway
+     ↓
+AWS Transit Gateway
+     ↓
+Redshift Route Table
+     ↓
+Redshift EC2
+10.0.0.0/16
+```
+
+---
+
+### Demo Course VPC → Transit Gateway → Redshift VPC
+
+```text
+Demo Course EC2
+71.0.0.0/16
+     ↓
+Demo Course Route Table
+     ↓
+10.0.0.0/16 → Transit Gateway
+     ↓
+AWS Transit Gateway
+     ↓
+Redshift Route Table
+     ↓
+Redshift EC2
+10.0.0.0/16
+```
+
+The Transit Gateway therefore provides centralized connectivity between all three VPCs.
 
 ---
 
@@ -631,15 +810,17 @@ For this hands-on lab, the public EC2 instance was used as an intermediate host.
 
 The access path was:
 
-    Local / AWS Environment
-            ↓
-           SSH
-            ↓
-         Public EC2
-            ↓
-           SSH
-            ↓
-         Private EC2
+```text
+Local / AWS Environment
+        ↓
+       SSH
+        ↓
+     Public EC2
+        ↓
+       SSH
+        ↓
+    Private EC2
+```
 
 The SSH private key was temporarily transferred to the public EC2 instance for the course lab and was **not committed to this repository**.
 
@@ -669,29 +850,31 @@ The private EC2 instance was successfully accessed from the public EC2 instance 
 
 Outbound Internet connectivity from the private EC2 instance was tested using:
 
-    ping 8.8.8.8
+```bash
+ping 8.8.8.8
+```
 
 The test successfully received responses.
 
 ![Private EC2 Internet Test](screenshots/24-private-ec2-internet-test.png)
 
-This validates the path:
+This validates:
 
-    Private EC2
-         ↓
-    Private Route Table
-         ↓
-    NAT Gateway
-         ↓
-    Internet Gateway
-         ↓
-    Internet
+```text
+Private EC2
+     ↓
+Private Route Table
+     ↓
+NAT Gateway
+     ↓
+Internet Gateway
+     ↓
+Internet
+```
 
 ---
 
 ### EC2 User Data and Apache Validation
-
-The EC2 instance launched with User Data successfully completed its automated initialization.
 
 Apache was verified as running:
 
@@ -701,47 +884,25 @@ The generated page was tested locally using `curl localhost`:
 
 ![EC2 User Data Localhost Test](screenshots/29-user-data-localhost-test.png)
 
-The web server was also successfully accessed using the EC2 instance's public IPv4 address from a browser:
+The web server was also accessed using the EC2 instance's public IPv4 address:
 
 ![EC2 User Data Browser Test](screenshots/30-user-data-browser-test.png)
 
-This confirms that the User Data script successfully installed Apache and generated the custom web page during instance initialization.
-
 ---
 
-### Security Group Configuration
-
-The public Apache EC2 instance was configured with a Security Group controlling its network access.
+### Security Group Validation
 
 The Security Group configuration was reviewed:
 
 ![Security Group Configuration](screenshots/31-security-group-configuration.png)
 
-HTTP traffic on TCP port `80` was allowed through the inbound rules:
+HTTP traffic on TCP port `80` was allowed:
 
 ![Security Group Inbound HTTP](screenshots/32-security-group-inbound-http.png)
 
-The outbound rules were also reviewed:
+Outbound rules were also reviewed:
 
 ![Security Group Outbound Rules](screenshots/33-security-group-outbound-rules.png)
-
-The resulting HTTP access path is:
-
-    Internet
-         ↓
-    Internet Gateway
-         ↓
-    Public Route Table
-         ↓
-    Public Subnet
-         ↓
-    Security Group
-         ↓
-    TCP : 80
-         ↓
-    EC2
-         ↓
-    Apache
 
 ---
 
@@ -757,11 +918,11 @@ The Target Group was configured for EC2 instances using HTTP on port `80` with a
 
 ### Initial Target Registration
 
-The existing public and private EC2 instances were registered in the Target Group.
+The EC2 instances were registered in the Target Group.
 
 ![Target Group Registered Targets](screenshots/35-target-group-registered-targets.png)
 
-The Target Group health status was then reviewed.
+The Target Group health status was then reviewed:
 
 ![Target Group Health Status](screenshots/36-target-group-health-status.png)
 
@@ -773,7 +934,7 @@ An internet-facing IPv4 Application Load Balancer was created in the existing VP
 
 ![Application Load Balancer Configuration](screenshots/37-application-load-balancer-configuration.png)
 
-The ALB network configuration was then completed using the VPC subnets.
+The ALB network configuration was completed using the VPC subnets.
 
 ![ALB Network Configuration](screenshots/38-alb-network-configuration.png)
 
@@ -799,11 +960,9 @@ The listener forwards traffic to the Target Group.
 
 ### ALB DNS
 
-After creation, the Application Load Balancer became active and provided a DNS name.
+The Application Load Balancer provided a DNS name for accessing the application.
 
 ![ALB DNS Details](screenshots/41-alb-dns-details.png)
-
-The DNS name provides a single entry point for accessing the application.
 
 ---
 
@@ -821,15 +980,13 @@ The request successfully reached an EC2 backend and returned the Apache page.
 
 A second public EC2 instance was created to demonstrate load balancing across multiple healthy backend servers.
 
-The second instance was configured with the same basic Apache User Data setup.
-
 ![Second Public EC2 Configuration](screenshots/43-second-public-ec2-configuration.png)
 
 The instance successfully entered the Running state:
 
 ![Second Public EC2 Running](screenshots/44-second-public-ec2-running.png)
 
-The second public EC2 instance was also tested directly to confirm that its Apache server was working:
+The second public EC2 instance was tested directly:
 
 ![Second Public EC2 Application Test](screenshots/45-second-public-ec2-application-test.png)
 
@@ -839,15 +996,15 @@ The second public EC2 instance was also tested directly to confirm that its Apac
 
 The second public EC2 instance was registered with the existing Target Group.
 
-The Target Group now contained:
-
-    Target Group
-         |
-         +── Public EC2 #1
-         |
-         +── Public EC2 #2
-         |
-         └── Private EC2
+```text
+Target Group
+     |
+     +── Public EC2 #1
+     |
+     +── Public EC2 #2
+     |
+     └── Private EC2
+```
 
 ![Target Group Two Public EC2](screenshots/46-target-group-two-public-ec2.png)
 
@@ -857,9 +1014,9 @@ The Target Group now contained:
 
 The final Target Group health status showed the health state of the registered targets.
 
-The two public EC2 instances were healthy targets and could serve traffic through the Application Load Balancer.
+The two public EC2 instances were healthy targets.
 
-The private EC2 instance remained registered but was shown as unhealthy in the lab.
+The private EC2 instance remained registered but was unhealthy in the lab.
 
 ![Target Group Final Health Status](screenshots/47-target-group-final-health-status.png)
 
@@ -867,7 +1024,7 @@ The private EC2 instance remained registered but was shown as unhealthy in the l
 
 ### ALB Backend Response 1
 
-A request sent to the same ALB DNS name returned the server information from one of the healthy public EC2 instances.
+A request sent to the ALB DNS name returned server information from one of the healthy public EC2 instances.
 
 ![ALB Backend Response 1](screenshots/48-alb-backend-response-1.png)
 
@@ -875,7 +1032,7 @@ A request sent to the same ALB DNS name returned the server information from one
 
 ### ALB Backend Response 2
 
-A subsequent request through the same ALB DNS name returned the server information from the other healthy public EC2 instance.
+A subsequent request through the same ALB DNS name returned server information from the other healthy public EC2 instance.
 
 ![ALB Backend Response 2](screenshots/49-alb-backend-response-2.png)
 
@@ -949,10 +1106,12 @@ This demonstrated that an active VPC Peering connection alone does not automatic
 
 ### Mumbai Route Table Peering Route
 
-The Mumbai route table was updated with a route for the N. Virginia VPC:
+The Mumbai route table was updated with:
 
-    Destination: 41.0.0.0/16
-    Target:      VPC Peering Connection
+```text
+Destination: 41.0.0.0/16
+Target:      VPC Peering Connection
+```
 
 ![Mumbai Route Table Peering Route](screenshots/64-mumbai-route-table-peering-route.png)
 
@@ -960,10 +1119,12 @@ The Mumbai route table was updated with a route for the N. Virginia VPC:
 
 ### N. Virginia Route Table Peering Route
 
-The N. Virginia route table was updated with a route for the Mumbai VPC:
+The N. Virginia route table was updated with:
 
-    Destination: 31.0.0.0/16
-    Target:      VPC Peering Connection
+```text
+Destination: 31.0.0.0/16
+Target:      VPC Peering Connection
+```
 
 ![N. Virginia Route Table Peering Route](screenshots/65-virginia-route-table-peering-route.png)
 
@@ -991,40 +1152,265 @@ This confirmed that communication was working in both directions.
 
 ---
 
+## 🚇 Transit Gateway Validation
+
+### Three-VPC Architecture
+
+The Transit Gateway lab uses three independent VPCs:
+
+```text
+AWS Course VPC
+31.0.0.0/16
+
+Demo Course VPC
+71.0.0.0/16
+
+Redshift VPC
+10.0.0.0/16
+```
+
+Each VPC contains its own networking infrastructure, including subnets, route tables, and Internet Gateway resources.
+
+![Three VPC Resource Map](screenshots/94-three-vpc-resource-map.png)
+
+---
+
+### Transit Gateway Configuration
+
+A centralized AWS Transit Gateway was created for the three-VPC architecture.
+
+![Transit Gateway Configuration](screenshots/95-transit-gateway-configuration.png)
+
+The Transit Gateway was successfully created and became available:
+
+![Transit Gateway Created](screenshots/96-transit-gateway-created.png)
+
+---
+
+### Transit Gateway Attachments
+
+Each VPC was connected to the Transit Gateway using a dedicated VPC attachment.
+
+#### AWS Course VPC Attachment
+
+![AWS Course Transit Gateway Attachment Configuration](screenshots/97-aws-course-transit-gateway-attachment-configuration.png)
+
+The AWS Course VPC attachment became available:
+
+![AWS Course Transit Gateway Attachment Available](screenshots/98-aws-course-transit-gateway-attachment-available.png)
+
+#### Demo Course VPC Attachment
+
+![Demo Course Transit Gateway Attachment Configuration](screenshots/99-demo-course-transit-gateway-attachment-configuration.png)
+
+The Demo Course VPC attachment became available:
+
+![Demo Course Transit Gateway Attachment Available](screenshots/100-demo-course-transit-gateway-attachment-available.png)
+
+#### Redshift VPC Attachment
+
+![Redshift Transit Gateway Attachment Configuration](screenshots/101-redshift-transit-gateway-attachment-configuration.png)
+
+The Redshift VPC attachment became available:
+
+![Redshift Transit Gateway Attachment Available](screenshots/102-redshift-transit-gateway-attachment-available.png)
+
+The final Transit Gateway attachment configuration showed all three VPCs connected:
+
+![Transit Gateway All Attachments](screenshots/103-transit-gateway-all-attachments.png)
+
+---
+
+### Transit Gateway Route Configuration
+
+The route tables of each VPC were updated to send traffic destined for remote VPC CIDRs through the Transit Gateway.
+
+#### AWS Course VPC
+
+The AWS Course public route table was configured with:
+
+```text
+71.0.0.0/16 → Transit Gateway
+10.0.0.0/16 → Transit Gateway
+```
+
+![AWS Course Public Route Table Transit Gateway Routes](screenshots/104-aws-course-public-route-table-transit-gateway-routes.png)
+
+The private route table was configured similarly:
+
+![AWS Course Private Route Table Transit Gateway Routes](screenshots/105-aws-course-private-route-table-transit-gateway-routes.png)
+
+#### Demo Course VPC
+
+The Demo Course VPC public route table was configured with:
+
+```text
+31.0.0.0/16 → Transit Gateway
+10.0.0.0/16 → Transit Gateway
+```
+
+![Demo Public Route Table Transit Gateway Routes](screenshots/106-demo-public-route-table-transit-gateway-routes.png)
+
+The private route table was also updated:
+
+![Demo Private Route Table Transit Gateway Routes](screenshots/107-demo-private-route-table-transit-gateway-routes.png)
+
+#### Redshift VPC
+
+The Redshift public route table was configured with:
+
+```text
+31.0.0.0/16 → Transit Gateway
+71.0.0.0/16 → Transit Gateway
+```
+
+![Redshift Public Route Table Transit Gateway Routes](screenshots/108-redshift-public-route-table-transit-gateway-routes.png)
+
+The private route table was also updated:
+
+![Redshift Private Route Table Transit Gateway Routes](screenshots/109-redshift-private-route-table-transit-gateway-routes.png)
+
+The final Transit Gateway routing configuration was verified:
+
+![Final Transit Gateway Routing Configuration](screenshots/110-final-transit-gateway-routing-configuration.png)
+
+---
+
+### EC2 Instances in the Three VPCs
+
+An EC2 instance was launched in each VPC for connectivity testing.
+
+#### AWS Course EC2
+
+![AWS Course EC2 Network Configuration](screenshots/111-aws-course-ec2-network-configuration.png)
+
+![AWS Course EC2 Running](screenshots/112-aws-course-ec2-running.png)
+
+#### Demo Course EC2
+
+![Demo Course EC2 Network Configuration](screenshots/113-demo-course-ec2-network-configuration.png)
+
+![Demo Course EC2 Running](screenshots/114-demo-course-ec2-running.png)
+
+#### Redshift EC2
+
+![Redshift EC2 Network Configuration](screenshots/115-redshift-ec2-network-configuration.png)
+
+![Redshift EC2 Running](screenshots/116-redshift-ec2-running.png)
+
+The private IPv4 addresses of the three EC2 instances were verified:
+
+![Three VPC EC2 Private IP Details](screenshots/117-three-vpc-ec2-private-ip-details.png)
+
+---
+
+### Transit Gateway Connectivity Tests
+
+The Transit Gateway connectivity was tested using the **private IPv4 addresses** of the EC2 instances.
+
+#### AWS Course → Demo Course
+
+![AWS Course to Demo Ping Success](screenshots/118-aws-course-to-demo-ping-success.png)
+
+#### AWS Course → Redshift
+
+![AWS Course to Redshift Ping Success](screenshots/119-aws-course-to-redshift-ping-success.png)
+
+#### Demo Course → AWS Course
+
+![Demo to AWS Course Ping Success](screenshots/120-demo-to-aws-course-ping-success.png)
+
+#### Demo Course → Redshift
+
+![Demo to Redshift Ping Success](screenshots/121-demo-to-redshift-ping-success.png)
+
+#### Redshift → AWS Course
+
+![Redshift to AWS Course Ping Success](screenshots/122-redshift-to-aws-course-ping-success.png)
+
+#### Redshift → Demo Course
+
+![Redshift to Demo Ping Success](screenshots/123-redshift-to-demo-ping-success.png)
+
+These tests demonstrated bidirectional private connectivity between all three VPCs through the centralized Transit Gateway.
+
+---
+
+### Transit Gateway Negative Test
+
+To demonstrate the importance of route-table configuration, the Transit Gateway routes were removed from the AWS Course VPC route table.
+
+![Transit Gateway Route Removed Negative Test](screenshots/124-transit-gateway-route-removed-negative-test.png)
+
+After removing the required route, the AWS Course EC2 instance could no longer reach the remote EC2 instance.
+
+![Transit Gateway Connectivity Blocked](screenshots/125-transit-gateway-connectivity-blocked.png)
+
+This demonstrates:
+
+```text
+Transit Gateway Attachment
+        ≠
+Automatic VPC Routing
+```
+
+The VPC route table must contain the appropriate remote CIDR route pointing to the Transit Gateway.
+
+After restoring the required route, Transit Gateway connectivity was successfully restored:
+
+![Final Transit Gateway Connectivity](screenshots/126-final-transit-gateway-connectivity.png)
+
+---
+
 ## 📸 Final AWS Resource Map
 
-The AWS VPC Resource Map below shows the networking relationships after adding the NAT Gateway and deploying the EC2 instances.
+The AWS VPC Resource Map shows the networking relationships after adding the NAT Gateway and deploying the EC2 instances.
 
 ![AWS VPC Resource Map](screenshots/25-final-vpc-resource-map.png)
 
 The primary Mumbai architecture includes:
 
-    VPC: 31.0.0.0/16
-    │
-    ├── Public Subnet
-    │   ├── Public EC2 #1
-    │   ├── Public EC2 #2
-    │   └── Public Route Table
-    │       ├── 31.0.0.0/16 → local
-    │       └── 0.0.0.0/0 → Internet Gateway
-    │
-    └── Private Subnet
-        ├── Private EC2
-        └── Private Route Table
-            ├── 31.0.0.0/16 → local
-            └── 0.0.0.0/0 → NAT Gateway
+```text
+VPC: 31.0.0.0/16
+│
+├── Public Subnet
+│   ├── Public EC2 #1
+│   ├── Public EC2 #2
+│   └── Public Route Table
+│       ├── 31.0.0.0/16 → local
+│       └── 0.0.0.0/0 → Internet Gateway
+│
+└── Private Subnet
+    ├── Private EC2
+    └── Private Route Table
+        ├── 31.0.0.0/16 → local
+        └── 0.0.0.0/0 → NAT Gateway
+```
 
 The Application Load Balancer and Target Group provide the application entry point and backend target layer above this VPC architecture.
 
-The VPC Peering lab extends the networking concepts into another AWS Region:
+The VPC Peering architecture extends the networking concepts into another AWS Region:
 
-    Mumbai VPC
-    31.0.0.0/16
-         |
-         | VPC Peering
-         |
-    N. Virginia VPC
-    41.0.0.0/16
+```text
+Mumbai VPC
+31.0.0.0/16
+     |
+     | VPC Peering
+     |
+N. Virginia VPC
+41.0.0.0/16
+```
+
+The Transit Gateway architecture extends the project further by connecting three VPCs through a centralized Transit Gateway:
+
+```text
+AWS Transit Gateway
+   /      |      \
+  /       |       \
+ /        |        \
+AWS Course  Demo Course  Redshift
+31.0.0.0/16 71.0.0.0/16 10.0.0.0/16
+```
 
 ---
 
@@ -1042,6 +1428,7 @@ Detailed step-by-step documentation is available for each part of the project:
 8. [Security Groups](docs/08-security-groups.md)
 9. [Application Load Balancer and Target Groups](docs/09-application-load-balancer.md)
 10. [VPC Peering](docs/10-vpc-peering.md)
+11. [Transit Gateway and Transit Gateway Attachments](docs/11-transit-gateway.md)
 
 Each section includes explanations of the networking concept, configuration details, implementation steps, traffic-flow explanations, validation, and AWS Console screenshots.
 
@@ -1049,97 +1436,160 @@ Each section includes explanations of the networking concept, configuration deta
 
 ## 📁 Repository Structure
 
-    aws-vpc-networking-basics/
-    │
-    ├── README.md
-    ├── LICENSE
-    │
-    ├── architecture/
-    │   ├── AWS-VPC-Subnet-Routing-Architecture.png
-    │   ├── AWS-VPC-EC2-NAT-Gateway-Architecture.png
-    │   ├── AWS-VPC-EC2-ALB-Architecture.png
-    │   └── AWS-VPC-Peering-Architecture.png
-    │
-    ├── docs/
-    │   ├── 01-vpc.md
-    │   ├── 02-subnets.md
-    │   ├── 03-internet-gateway.md
-    │   ├── 04-route-tables.md
-    │   ├── 05-nat-gateway.md
-    │   ├── 06-ec2-in-vpc.md
-    │   ├── 07-ec2-user-data.md
-    │   ├── 08-security-groups.md
-    │   ├── 09-application-load-balancer.md
-    │   └── 10-vpc-peering.md
-    │
-    └── screenshots/
-        ├── 01-vpc-configuration.png
-        ├── 02-vpc-created.png
-        ├── 03-public-subnet-configuration.png
-        ├── 04-private-subnet-configuration.png
-        ├── 05-subnets-created.png
-        ├── 06-internet-gateway-creation.png
-        ├── 07-internet-gateway-attached.png
-        ├── 08-public-route-table-creation.png
-        ├── 09-public-route-table-internet-route.png
-        ├── 10-public-subnet-route-table-association.png
-        ├── 11-private-route-table-creation.png
-        ├── 12-final-vpc-resource-map.png
-        ├── 13-nat-gateway-configuration.png
-        ├── 14-nat-gateway-available.png
-        ├── 15-private-route-table-nat-route-configuration.png
-        ├── 16-private-route-table-nat-route.png
-        ├── 17-public-ec2-network-configuration.png
-        ├── 18-public-ec2-running.png
-        ├── 19-public-ec2-network-details.png
-        ├── 20-public-ec2-ssh-connection.png
-        ├── 21-private-ec2-network-configuration.png
-        ├── 22-private-ec2-running.png
-        ├── 23-private-ec2-ssh-via-public-ec2.png
-        ├── 24-private-ec2-internet-test.png
-        ├── 25-final-vpc-resource-map.png
-        ├── 26-ec2-user-data-configuration.png
-        ├── 27-user-data-ec2-running.png
-        ├── 28-apache-service-running.png
-        ├── 29-user-data-localhost-test.png
-        ├── 30-user-data-browser-test.png
-        ├── 31-security-group-configuration.png
-        ├── 32-security-group-inbound-http.png
-        ├── 33-security-group-outbound-rules.png
-        ├── 34-target-group-configuration.png
-        ├── 35-target-group-registered-targets.png
-        ├── 36-target-group-health-status.png
-        ├── 37-application-load-balancer-configuration.png
-        ├── 38-alb-network-configuration.png
-        ├── 39-alb-security-group-http-rule.png
-        ├── 40-alb-listener-target-group.png
-        ├── 41-alb-dns-details.png
-        ├── 42-alb-application-test.png
-        ├── 43-second-public-ec2-configuration.png
-        ├── 44-second-public-ec2-running.png
-        ├── 45-second-public-ec2-application-test.png
-        ├── 46-target-group-two-public-ec2.png
-        ├── 47-target-group-final-health-status.png
-        ├── 48-alb-backend-response-1.png
-        ├── 49-alb-backend-response-2.png
-        ├── 50-virginia-vpc-configuration.png
-        ├── 51-virginia-public-subnet-configuration.png
-        ├── 52-virginia-private-subnet-configuration.png
-        ├── 53-virginia-internet-gateway.png
-        ├── 54-virginia-route-table-configuration.png
-        ├── 55-vpc-peering-request-configuration.png
-        ├── 56-vpc-peering-pending-acceptance.png
-        ├── 57-vpc-peering-acceptance.png
-        ├── 58-vpc-peering-active.png
-        ├── 59-mumbai-ec2-network-configuration.png
-        ├── 60-virginia-ec2-network-configuration.png
-        ├── 61-mumbai-ec2-running.png
-        ├── 62-virginia-ec2-running.png
-        ├── 63-mumbai-to-virginia-ping-failed.png
-        ├── 64-mumbai-route-table-peering-route.png
-        ├── 65-virginia-route-table-peering-route.png
-        ├── 66-mumbai-to-virginia-ping-success.png
-        └── 67-virginia-to-mumbai-ping-success.png
+```text
+aws-vpc-networking-basics/
+│
+├── README.md
+├── LICENSE
+│
+├── architecture/
+│   ├── AWS-VPC-Subnet-Routing-Architecture.png
+│   ├── AWS-VPC-EC2-NAT-Gateway-Architecture.png
+│   ├── AWS-VPC-EC2-ALB-Architecture.png
+│   ├── AWS-VPC-Peering-Architecture.png
+│   └── AWS-VPC-Transit-Gateway-Architecture.png
+│
+├── docs/
+│   ├── 01-vpc.md
+│   ├── 02-subnets.md
+│   ├── 03-internet-gateway.md
+│   ├── 04-route-tables.md
+│   ├── 05-nat-gateway.md
+│   ├── 06-ec2-in-vpc.md
+│   ├── 07-ec2-user-data.md
+│   ├── 08-security-groups.md
+│   ├── 09-application-load-balancer.md
+│   ├── 10-vpc-peering.md
+│   └── 11-transit-gateway.md
+│
+└── screenshots/
+    ├── 01-vpc-configuration.png
+    ├── 02-vpc-created.png
+    ├── 03-public-subnet-configuration.png
+    ├── 04-private-subnet-configuration.png
+    ├── 05-subnets-created.png
+    ├── 06-internet-gateway-creation.png
+    ├── 07-internet-gateway-attached.png
+    ├── 08-public-route-table-creation.png
+    ├── 09-public-route-table-internet-route.png
+    ├── 10-public-subnet-route-table-association.png
+    ├── 11-private-route-table-creation.png
+    ├── 12-final-vpc-resource-map.png
+    ├── 13-nat-gateway-configuration.png
+    ├── 14-nat-gateway-available.png
+    ├── 15-private-route-table-nat-route-configuration.png
+    ├── 16-private-route-table-nat-route.png
+    ├── 17-public-ec2-network-configuration.png
+    ├── 18-public-ec2-running.png
+    ├── 19-public-ec2-network-details.png
+    ├── 20-public-ec2-ssh-connection.png
+    ├── 21-private-ec2-network-configuration.png
+    ├── 22-private-ec2-running.png
+    ├── 23-private-ec2-ssh-via-public-ec2.png
+    ├── 24-private-ec2-internet-test.png
+    ├── 25-final-vpc-resource-map.png
+    ├── 26-ec2-user-data-configuration.png
+    ├── 27-user-data-ec2-running.png
+    ├── 28-apache-service-running.png
+    ├── 29-user-data-localhost-test.png
+    ├── 30-user-data-browser-test.png
+    ├── 31-security-group-configuration.png
+    ├── 32-security-group-inbound-http.png
+    ├── 33-security-group-outbound-rules.png
+    ├── 34-target-group-configuration.png
+    ├── 35-target-group-registered-targets.png
+    ├── 36-target-group-health-status.png
+    ├── 37-application-load-balancer-configuration.png
+    ├── 38-alb-network-configuration.png
+    ├── 39-alb-security-group-http-rule.png
+    ├── 40-alb-listener-target-group.png
+    ├── 41-alb-dns-details.png
+    ├── 42-alb-application-test.png
+    ├── 43-second-public-ec2-configuration.png
+    ├── 44-second-public-ec2-running.png
+    ├── 45-second-public-ec2-application-test.png
+    ├── 46-target-group-two-public-ec2.png
+    ├── 47-target-group-final-health-status.png
+    ├── 48-alb-backend-response-1.png
+    ├── 49-alb-backend-response-2.png
+    ├── 50-virginia-vpc-configuration.png
+    ├── 51-virginia-public-subnet-configuration.png
+    ├── 52-virginia-private-subnet-configuration.png
+    ├── 53-virginia-internet-gateway.png
+    ├── 54-virginia-route-table-configuration.png
+    ├── 55-vpc-peering-request-configuration.png
+    ├── 56-vpc-peering-pending-acceptance.png
+    ├── 57-vpc-peering-acceptance.png
+    ├── 58-vpc-peering-active.png
+    ├── 59-mumbai-ec2-network-configuration.png
+    ├── 60-virginia-ec2-network-configuration.png
+    ├── 61-mumbai-ec2-running.png
+    ├── 62-virginia-ec2-running.png
+    ├── 63-mumbai-to-virginia-ping-failed.png
+    ├── 64-mumbai-route-table-peering-route.png
+    ├── 65-virginia-route-table-peering-route.png
+    ├── 66-mumbai-to-virginia-ping-success.png
+    ├── 67-virginia-to-mumbai-ping-success.png
+    ├── 68-vpc-71-configuration.png
+    ├── 69-vpc-71-created.png
+    ├── 70-vpc-10-configuration.png
+    ├── 71-vpc-10-created.png
+    ├── 72-demo-public-subnet-configuration.png
+    ├── 73-demo-public-subnet-created.png
+    ├── 74-demo-private-subnet-configuration.png
+    ├── 75-demo-private-subnet-created.png
+    ├── 76-demo-internet-gateway-creation.png
+    ├── 77-demo-internet-gateway-attached.png
+    ├── 78-demo-public-route-table-creation.png
+    ├── 79-demo-public-route-table-internet-route.png
+    ├── 80-demo-public-subnet-route-table-association.png
+    ├── 81-demo-private-route-table-creation.png
+    ├── 82-demo-private-subnet-route-table-association.png
+    ├── 83-redshift-public-subnet-configuration.png
+    ├── 84-redshift-public-subnet-created.png
+    ├── 85-redshift-private-subnet-configuration.png
+    ├── 86-redshift-private-subnet-created.png
+    ├── 87-redshift-internet-gateway-creation.png
+    ├── 88-redshift-internet-gateway-attached.png
+    ├── 89-redshift-public-route-table-creation.png
+    ├── 90-redshift-public-route-table-internet-route.png
+    ├── 91-redshift-public-subnet-route-table-association.png
+    ├── 92-redshift-private-route-table-creation.png
+    ├── 93-redshift-private-subnet-route-table-association.png
+    ├── 94-three-vpc-resource-map.png
+    ├── 95-transit-gateway-configuration.png
+    ├── 96-transit-gateway-created.png
+    ├── 97-aws-course-transit-gateway-attachment-configuration.png
+    ├── 98-aws-course-transit-gateway-attachment-available.png
+    ├── 99-demo-course-transit-gateway-attachment-configuration.png
+    ├── 100-demo-course-transit-gateway-attachment-available.png
+    ├── 101-redshift-transit-gateway-attachment-configuration.png
+    ├── 102-redshift-transit-gateway-attachment-available.png
+    ├── 103-transit-gateway-all-attachments.png
+    ├── 104-aws-course-public-route-table-transit-gateway-routes.png
+    ├── 105-aws-course-private-route-table-transit-gateway-routes.png
+    ├── 106-demo-public-route-table-transit-gateway-routes.png
+    ├── 107-demo-private-route-table-transit-gateway-routes.png
+    ├── 108-redshift-public-route-table-transit-gateway-routes.png
+    ├── 109-redshift-private-route-table-transit-gateway-routes.png
+    ├── 110-final-transit-gateway-routing-configuration.png
+    ├── 111-aws-course-ec2-network-configuration.png
+    ├── 112-aws-course-ec2-running.png
+    ├── 113-demo-course-ec2-network-configuration.png
+    ├── 114-demo-course-ec2-running.png
+    ├── 115-redshift-ec2-network-configuration.png
+    ├── 116-redshift-ec2-running.png
+    ├── 117-three-vpc-ec2-private-ip-details.png
+    ├── 118-aws-course-to-demo-ping-success.png
+    ├── 119-aws-course-to-redshift-ping-success.png
+    ├── 120-demo-to-aws-course-ping-success.png
+    ├── 121-demo-to-redshift-ping-success.png
+    ├── 122-redshift-to-aws-course-ping-success.png
+    ├── 123-redshift-to-demo-ping-success.png
+    ├── 124-transit-gateway-route-removed-negative-test.png
+    ├── 125-transit-gateway-connectivity-blocked.png
+    └── 126-final-transit-gateway-connectivity.png
+```
 
 ---
 
@@ -1197,6 +1647,15 @@ Through this project, I gained hands-on experience with:
 - Bidirectional VPC Peering connectivity
 - VPC Peering limitations
 - Non-transitive VPC routing
+- AWS Transit Gateway
+- Transit Gateway VPC attachments
+- Centralized connectivity between multiple VPCs
+- Transit Gateway route-table configuration
+- Private IPv4 communication through Transit Gateway
+- Transit Gateway connectivity validation
+- Negative connectivity testing
+- Transit Gateway routing dependencies
+- Comparing VPC Peering with Transit Gateway architecture
 
 One of the key concepts demonstrated by this project is that simply naming a subnet **public** or **private** does not determine its networking behavior.
 
@@ -1206,25 +1665,33 @@ Security Groups provide an additional traffic-control layer at the resource leve
 
 In this architecture:
 
-    Public Subnet
-    0.0.0.0/0 → Internet Gateway
-           ↓
-    Security Group
-           ↓
-    TCP 80 → Apache
+```text
+Public Subnet
+0.0.0.0/0 → Internet Gateway
+      ↓
+Security Group
+      ↓
+TCP 80 → Apache
+```
 
 while:
 
-    Private Subnet
-    0.0.0.0/0 → NAT Gateway
+```text
+Private Subnet
+0.0.0.0/0 → NAT Gateway
+```
 
 The private EC2 instance can therefore initiate outbound Internet connections without having a public IPv4 address or a direct Internet Gateway route.
 
-EC2 User Data additionally demonstrates how instance initialization tasks can be automated during launch instead of being performed manually after connecting to the server.
+EC2 User Data demonstrates how instance initialization tasks can be automated during launch instead of being performed manually after connecting to the server.
 
 The Application Load Balancer demonstrates how a single internet-facing endpoint can distribute HTTP requests across multiple healthy backend EC2 instances.
 
-VPC Peering additionally demonstrates how two VPCs in different AWS Regions can communicate privately when the peering connection is active and the appropriate routes are configured on both sides.
+VPC Peering demonstrates how two VPCs in different AWS Regions can communicate privately when the peering connection is active and the appropriate routes are configured on both sides.
+
+Transit Gateway extends this concept by providing a centralized connectivity hub through which multiple VPCs can communicate using dedicated VPC attachments and appropriate route-table entries.
+
+The Transit Gateway lab also demonstrates that creating attachments alone does not automatically establish end-to-end connectivity. The required remote VPC CIDR routes must be present in the VPC route tables.
 
 ---
 
@@ -1232,14 +1699,14 @@ VPC Peering additionally demonstrates how two VPCs in different AWS Regions can 
 
 AWS resources created for hands-on practice should be removed after completing the lab when they are no longer required.
 
-Resources created throughout this project currently include:
+Resources created throughout this project include:
 
-- Custom VPC
-- Public subnet
-- Private subnet
-- Internet Gateway
-- Public route table
-- Private route table
+- Custom VPCs
+- Public subnets
+- Private subnets
+- Internet Gateways
+- Public route tables
+- Private route tables
 - NAT Gateway
 - NAT Gateway public IP / Elastic IP resources where applicable
 - Public EC2 instances
@@ -1250,8 +1717,12 @@ Resources created throughout this project currently include:
 - VPC Peering connection
 - Additional VPC and networking resources used in the N. Virginia VPC Peering lab
 - EC2 instances used for cross-region VPC connectivity testing
+- Transit Gateway
+- Transit Gateway VPC attachments
+- Additional VPCs used for Transit Gateway testing
+- EC2 instances used for Transit Gateway connectivity testing
 
-NAT Gateway, public IPv4 resources, EC2 instances, and other running AWS resources can incur charges, so temporary lab resources should not be left running unnecessarily.
+NAT Gateway, public IPv4 resources, EC2 instances, Transit Gateway resources, and other running AWS resources can incur charges, so temporary lab resources should not be left running unnecessarily.
 
 ---
 
@@ -1265,8 +1736,10 @@ The VPC CIDR `31.0.0.0/16` follows the addressing used during the training lab. 
 
 The Security Group configuration used in this lab allows SSH and HTTP from `0.0.0.0/0` for learning and testing purposes. Restricting administrative access to trusted source addresses or using managed access mechanisms is preferable in production environments.
 
-The Application Load Balancer and Target Group configuration in this project is also intended for learning and demonstration purposes.
+The Application Load Balancer and Target Group configuration in this project is intended for learning and demonstration purposes.
 
 The VPC Peering configuration is also intended for learning and demonstration purposes. VPC Peering is a one-to-one connection and does not provide transitive routing between multiple VPCs.
+
+The Transit Gateway configuration is also intended for learning and demonstration purposes. Transit Gateway provides centralized connectivity between multiple attached VPCs, but the appropriate route-table configuration is still required for traffic to reach the intended destination.
 
 The project will continue to evolve as additional AWS networking concepts are implemented.
