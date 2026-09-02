@@ -998,915 +998,6 @@ Local / AWS Environment
 
 The SSH private key was temporarily transferred to the public EC2 instance for the course lab and was **not committed to this repository**.
 
-> **Security Note:** Copying private SSH keys onto an intermediate instance is not the preferred approach for production environments. More secure access methods can include SSH agent forwarding or AWS Systems Manager Session Manager.
-
----
-
-## 🧪 Connectivity Validation
-
-### Public EC2 Access
-
-Successful SSH connectivity to the public EC2 instance was verified.
-
-![Public EC2 SSH Connection](screenshots/20-public-ec2-ssh-connection.png)
-
----
-
-### Private EC2 Access
-
-The private EC2 instance was successfully accessed from the public EC2 instance using its private IPv4 address.
-
-![Private EC2 SSH via Public EC2](screenshots/23-private-ec2-ssh-via-public-ec2.png)
-
----
-
-### Private EC2 Internet Connectivity
-
-Outbound Internet connectivity from the private EC2 instance was tested using:
-
-```bash
-ping 8.8.8.8
-```
-
-The test successfully received responses.
-
-![Private EC2 Internet Test](screenshots/24-private-ec2-internet-test.png)
-
-This validates:
-
-```text
-Private EC2
-     ↓
-Private Route Table
-     ↓
-NAT Gateway
-     ↓
-Internet Gateway
-     ↓
-Internet
-```
-
----
-
-### EC2 User Data and Apache Validation
-
-Apache was verified as running:
-
-![Apache Service Running](screenshots/28-apache-service-running.png)
-
-The generated page was tested locally using `curl localhost`:
-
-![EC2 User Data Localhost Test](screenshots/29-user-data-localhost-test.png)
-
-The web server was also accessed using the EC2 instance's public IPv4 address:
-
-![EC2 User Data Browser Test](screenshots/30-user-data-browser-test.png)
-
----
-
-### Security Group Validation
-
-The Security Group configuration was reviewed:
-
-![Security Group Configuration](screenshots/31-security-group-configuration.png)
-
-HTTP traffic on TCP port `80` was allowed:
-
-![Security Group Inbound HTTP](screenshots/32-security-group-inbound-http.png)
-
-Outbound rules were also reviewed:
-
-![Security Group Outbound Rules](screenshots/33-security-group-outbound-rules.png)
-
----
-
-## ⚖️ Application Load Balancer Validation
-
-### Target Group Configuration
-
-The Target Group was configured for EC2 instances using HTTP on port `80` with an HTTP health check on `/`.
-
-![Target Group Configuration](screenshots/34-target-group-configuration.png)
-
----
-
-### Initial Target Registration
-
-The EC2 instances were registered in the Target Group.
-
-![Target Group Registered Targets](screenshots/35-target-group-registered-targets.png)
-
-The Target Group health status was then reviewed:
-
-![Target Group Health Status](screenshots/36-target-group-health-status.png)
-
----
-
-### Application Load Balancer Configuration
-
-An internet-facing IPv4 Application Load Balancer was created in the existing VPC.
-
-![Application Load Balancer Configuration](screenshots/37-application-load-balancer-configuration.png)
-
-The ALB network configuration was completed using the VPC subnets.
-
-![ALB Network Configuration](screenshots/38-alb-network-configuration.png)
-
----
-
-### ALB Security Group
-
-The ALB Security Group was configured to allow HTTP traffic on TCP port `80`.
-
-![ALB Security Group HTTP Rule](screenshots/39-alb-security-group-http-rule.png)
-
----
-
-### ALB Listener
-
-The Application Load Balancer was configured with an HTTP listener on port `80`.
-
-The listener forwards traffic to the Target Group.
-
-![ALB Listener Target Group](screenshots/40-alb-listener-target-group.png)
-
----
-
-### ALB DNS
-
-The Application Load Balancer provided a DNS name for accessing the application.
-
-![ALB DNS Details](screenshots/41-alb-dns-details.png)
-
----
-
-### First ALB Application Test
-
-The ALB DNS name was opened in a browser.
-
-The request successfully reached an EC2 backend and returned the Apache page.
-
-![ALB Application Test](screenshots/42-alb-application-test.png)
-
----
-
-### Second Public EC2 Instance
-
-A second public EC2 instance was created to demonstrate load balancing across multiple healthy backend servers.
-
-![Second Public EC2 Configuration](screenshots/43-second-public-ec2-configuration.png)
-
-The instance successfully entered the Running state:
-
-![Second Public EC2 Running](screenshots/44-second-public-ec2-running.png)
-
-The second public EC2 instance was tested directly:
-
-![Second Public EC2 Application Test](screenshots/45-second-public-ec2-application-test.png)
-
----
-
-### Final Target Group
-
-The second public EC2 instance was registered with the existing Target Group.
-
-```text
-Target Group
-     |
-     +── Public EC2 #1
-     |
-     +── Public EC2 #2
-     |
-     └── Private EC2
-```
-
-![Target Group Two Public EC2](screenshots/46-target-group-two-public-ec2.png)
-
----
-
-### Target Health
-
-The final Target Group health status showed the health state of the registered targets.
-
-The two public EC2 instances were healthy targets.
-
-The private EC2 instance remained registered but was unhealthy in the lab.
-
-![Target Group Final Health Status](screenshots/47-target-group-final-health-status.png)
-
----
-
-### ALB Backend Response 1
-
-A request sent to the ALB DNS name returned server information from one of the healthy public EC2 instances.
-
-![ALB Backend Response 1](screenshots/48-alb-backend-response-1.png)
-
----
-
-### ALB Backend Response 2
-
-A subsequent request through the same ALB DNS name returned server information from the other healthy public EC2 instance.
-
-![ALB Backend Response 2](screenshots/49-alb-backend-response-2.png)
-
-These tests demonstrate that the same ALB DNS name can serve responses from different healthy backend EC2 instances.
-
----
-
-## 🔗 VPC Peering Validation
-
-### VPC Peering Request
-
-The VPC Peering request was created from the Mumbai VPC toward the N. Virginia VPC.
-
-![VPC Peering Request Configuration](screenshots/55-vpc-peering-request-configuration.png)
-
----
-
-### Pending Acceptance
-
-The peering request initially appeared in the N. Virginia region with a pending acceptance status.
-
-![VPC Peering Pending Acceptance](screenshots/56-vpc-peering-pending-acceptance.png)
-
----
-
-### Peering Request Accepted
-
-The peering request was accepted from the N. Virginia VPC.
-
-![VPC Peering Acceptance](screenshots/57-vpc-peering-acceptance.png)
-
----
-
-### Peering Connection Active
-
-After acceptance, the VPC Peering connection became active.
-
-![VPC Peering Active](screenshots/58-vpc-peering-active.png)
-
----
-
-### EC2 Instances in Both Regions
-
-An EC2 instance was launched in the Mumbai VPC:
-
-![Mumbai EC2 Network Configuration](screenshots/59-mumbai-ec2-network-configuration.png)
-
-An EC2 instance was also launched in the N. Virginia VPC:
-
-![N. Virginia EC2 Network Configuration](screenshots/60-virginia-ec2-network-configuration.png)
-
-Both instances successfully reached the Running state:
-
-![Mumbai EC2 Running](screenshots/61-mumbai-ec2-running.png)
-
-![N. Virginia EC2 Running](screenshots/62-virginia-ec2-running.png)
-
----
-
-### Connectivity Test Before Routes
-
-Before adding the VPC Peering routes, the Mumbai EC2 instance attempted to ping the private IP address of the N. Virginia EC2 instance.
-
-The ping failed because the route tables did not yet contain routes toward the remote VPC CIDR.
-
-![Mumbai to N. Virginia Ping Failed](screenshots/63-mumbai-to-virginia-ping-failed.png)
-
-This demonstrated that an active VPC Peering connection alone does not automatically provide routing between the VPCs.
-
----
-
-### Mumbai Route Table Peering Route
-
-The Mumbai route table was updated with:
-
-```text
-Destination: 41.0.0.0/16
-Target:      VPC Peering Connection
-```
-
-![Mumbai Route Table Peering Route](screenshots/64-mumbai-route-table-peering-route.png)
-
----
-
-### N. Virginia Route Table Peering Route
-
-The N. Virginia route table was updated with:
-
-```text
-Destination: 31.0.0.0/16
-Target:      VPC Peering Connection
-```
-
-![N. Virginia Route Table Peering Route](screenshots/65-virginia-route-table-peering-route.png)
-
----
-
-### Mumbai → N. Virginia Connectivity
-
-After configuring the routes, the Mumbai EC2 instance successfully pinged the private IP of the N. Virginia EC2 instance.
-
-![Mumbai to N. Virginia Ping Success](screenshots/66-mumbai-to-virginia-ping-success.png)
-
-This confirmed that traffic from the Mumbai VPC could reach the N. Virginia VPC through the VPC Peering connection.
-
----
-
-### N. Virginia → Mumbai Connectivity
-
-The reverse direction was also tested.
-
-The N. Virginia EC2 instance successfully pinged the private IP of the Mumbai EC2 instance.
-
-![N. Virginia to Mumbai Ping Success](screenshots/67-virginia-to-mumbai-ping-success.png)
-
-This confirmed that communication was working in both directions.
-
----
-
-## 🚇 Transit Gateway Validation
-
-### Three-VPC Architecture
-
-The Transit Gateway lab uses three independent VPCs:
-
-```text
-AWS Course VPC
-31.0.0.0/16
-
-Demo Course VPC
-71.0.0.0/16
-
-Redshift VPC
-10.0.0.0/16
-```
-
-Each VPC contains its own networking infrastructure, including subnets, route tables, and Internet Gateway resources.
-
-![Three VPC Resource Map](screenshots/94-three-vpc-resource-map.png)
-
----
-
-### Transit Gateway Configuration
-
-A centralized AWS Transit Gateway was created for the three-VPC architecture.
-
-![Transit Gateway Configuration](screenshots/95-transit-gateway-configuration.png)
-
-The Transit Gateway was successfully created and became available:
-
-![Transit Gateway Created](screenshots/96-transit-gateway-created.png)
-
----
-
-### Transit Gateway Attachments
-
-Each VPC was connected to the Transit Gateway using a dedicated VPC attachment.
-
-#### AWS Course VPC Attachment
-
-![AWS Course Transit Gateway Attachment Configuration](screenshots/97-aws-course-transit-gateway-attachment-configuration.png)
-
-The AWS Course VPC attachment became available:
-
-![AWS Course Transit Gateway Attachment Available](screenshots/98-aws-course-transit-gateway-attachment-available.png)
-
-#### Demo Course VPC Attachment
-
-![Demo Course Transit Gateway Attachment Configuration](screenshots/99-demo-course-transit-gateway-attachment-configuration.png)
-
-The Demo Course VPC attachment became available:
-
-![Demo Course Transit Gateway Attachment Available](screenshots/100-demo-course-transit-gateway-attachment-available.png)
-
-#### Redshift VPC Attachment
-
-![Redshift Transit Gateway Attachment Configuration](screenshots/101-redshift-transit-gateway-attachment-configuration.png)
-
-The Redshift VPC attachment became available:
-
-![Redshift Transit Gateway Attachment Available](screenshots/102-redshift-transit-gateway-attachment-available.png)
-
-The final Transit Gateway attachment configuration showed all three VPCs connected:
-
-![Transit Gateway All Attachments](screenshots/103-transit-gateway-all-attachments.png)
-
----
-
-### Transit Gateway Route Configuration
-
-The route tables of each VPC were updated to send traffic destined for remote VPC CIDRs through the Transit Gateway.
-
-#### AWS Course VPC
-
-The AWS Course public route table was configured with:
-
-```text
-71.0.0.0/16 → Transit Gateway
-10.0.0.0/16 → Transit Gateway
-```
-
-![AWS Course Public Route Table Transit Gateway Routes](screenshots/104-aws-course-public-route-table-transit-gateway-routes.png)
-
-The private route table was configured similarly:
-
-![AWS Course Private Route Table Transit Gateway Routes](screenshots/105-aws-course-private-route-table-transit-gateway-routes.png)
-
-#### Demo Course VPC
-
-The Demo Course VPC public route table was configured with:
-
-```text
-31.0.0.0/16 → Transit Gateway
-10.0.0.0/16 → Transit Gateway
-```
-
-![Demo Public Route Table Transit Gateway Routes](screenshots/106-demo-public-route-table-transit-gateway-routes.png)
-
-The private route table was also updated:
-
-![Demo Private Route Table Transit Gateway Routes](screenshots/107-demo-private-route-table-transit-gateway-routes.png)
-
-#### Redshift VPC
-
-The Redshift public route table was configured with:
-
-```text
-31.0.0.0/16 → Transit Gateway
-71.0.0.0/16 → Transit Gateway
-```
-
-![Redshift Public Route Table Transit Gateway Routes](screenshots/108-redshift-public-route-table-transit-gateway-routes.png)
-
-The private route table was also updated:
-
-![Redshift Private Route Table Transit Gateway Routes](screenshots/109-redshift-private-route-table-transit-gateway-routes.png)
-
-The final Transit Gateway routing configuration was verified:
-
-![Final Transit Gateway Routing Configuration](screenshots/110-final-transit-gateway-routing-configuration.png)
-
----
-
-### EC2 Instances in the Three VPCs
-
-An EC2 instance was launched in each VPC for connectivity testing.
-
-#### AWS Course EC2
-
-![AWS Course EC2 Network Configuration](screenshots/111-aws-course-ec2-network-configuration.png)
-
-![AWS Course EC2 Running](screenshots/112-aws-course-ec2-running.png)
-
-#### Demo Course EC2
-
-![Demo Course EC2 Network Configuration](screenshots/113-demo-course-ec2-network-configuration.png)
-
-![Demo Course EC2 Running](screenshots/114-demo-course-ec2-running.png)
-
-#### Redshift EC2
-
-![Redshift EC2 Network Configuration](screenshots/115-redshift-ec2-network-configuration.png)
-
-![Redshift EC2 Running](screenshots/116-redshift-ec2-running.png)
-
-The private IPv4 addresses of the three EC2 instances were verified:
-
-![Three VPC EC2 Private IP Details](screenshots/117-three-vpc-ec2-private-ip-details.png)
-
----
-
-### Transit Gateway Connectivity Tests
-
-The Transit Gateway connectivity was tested using the **private IPv4 addresses** of the EC2 instances.
-
-#### AWS Course → Demo Course
-
-![AWS Course to Demo Ping Success](screenshots/118-aws-course-to-demo-ping-success.png)
-
-#### AWS Course → Redshift
-
-![AWS Course to Redshift Ping Success](screenshots/119-aws-course-to-redshift-ping-success.png)
-
-#### Demo Course → AWS Course
-
-![Demo to AWS Course Ping Success](screenshots/120-demo-to-aws-course-ping-success.png)
-
-#### Demo Course → Redshift
-
-![Demo to Redshift Ping Success](screenshots/121-demo-to-redshift-ping-success.png)
-
-#### Redshift → AWS Course
-
-![Redshift to AWS Course Ping Success](screenshots/122-redshift-to-aws-course-ping-success.png)
-
-#### Redshift → Demo Course
-
-![Redshift to Demo Ping Success](screenshots/123-redshift-to-demo-ping-success.png)
-
-These tests demonstrated bidirectional private connectivity between all three VPCs through the centralized Transit Gateway.
-
----
-
-### Transit Gateway Negative Test
-
-To demonstrate the importance of route-table configuration, the Transit Gateway routes were removed from the AWS Course VPC route table.
-
-![Transit Gateway Route Removed Negative Test](screenshots/124-transit-gateway-route-removed-negative-test.png)
-
-After removing the required route, the AWS Course EC2 instance could no longer reach the remote EC2 instance.
-
-![Transit Gateway Connectivity Blocked](screenshots/125-transit-gateway-connectivity-blocked.png)
-
-This demonstrates:
-
-```text
-Transit Gateway Attachment
-        ≠
-Automatic VPC Routing
-```
-
-The VPC route table must contain the appropriate remote CIDR route pointing to the Transit Gateway.
-
-After restoring the required route, Transit Gateway connectivity was successfully restored:
-
-![Final Transit Gateway Connectivity](screenshots/126-final-transit-gateway-connectivity.png)
-
----
-
-## 🌎 Transit Gateway Cross-Region Peering Validation
-
-### Virginia VPC Configuration
-
-A VPC was configured in the **US East (N. Virginia) `us-east-1`** region for the cross-region Transit Gateway Peering lab.
-
-The Virginia VPC uses:
-
-```text
-41.0.0.0/16
-```
-
-![Virginia VPC Configuration](screenshots/127-virginia-vpc-configuration.png)
-
-The Virginia VPC was successfully created:
-
-![Virginia VPC Created](screenshots/128-virginia-vpc-created.png)
-
----
-
-### Virginia Public and Private Subnets
-
-The Virginia public subnet was configured:
-
-![Virginia Public Subnet Configuration](screenshots/129-virginia-public-subnet-configuration.png)
-
-The Virginia private subnet was configured:
-
-![Virginia Private Subnet Configuration](screenshots/130-virginia-private-subnet-configuration.png)
-
-Both subnets were successfully created:
-
-![Virginia Subnets Created](screenshots/131-virginia-subnets-created.png)
-
----
-
-### Virginia Internet Gateway
-
-An Internet Gateway was created for the Virginia VPC:
-
-![Virginia Internet Gateway Creation](screenshots/132-virginia-internet-gateway-creation.png)
-
-The Internet Gateway was attached to the Virginia VPC:
-
-![Virginia Internet Gateway Attached](screenshots/133-virginia-internet-gateway-attached.png)
-
----
-
-### Virginia Route Tables
-
-The Virginia public route table was created:
-
-![Virginia Public Route Table Creation](screenshots/134-virginia-public-route-table-creation.png)
-
-The public route table was configured with the Internet Gateway route:
-
-![Virginia Public Route Table Internet Route](screenshots/135-virginia-public-route-table-internet-route.png)
-
-The Virginia public subnet was associated with the public route table:
-
-![Virginia Public Subnet Route Table Association](screenshots/136-virginia-public-subnet-route-table-association.png)
-
-The Virginia private route table was created:
-
-![Virginia Private Route Table Creation](screenshots/137-virginia-private-route-table-creation.png)
-
-The Virginia private subnet was associated with the private route table:
-
-![Virginia Private Subnet Route Table Association](screenshots/138-virginia-private-subnet-route-table-association.png)
-
----
-
-### Virginia Transit Gateway
-
-A Transit Gateway was configured in the Virginia region to act as the **accepter** side of the cross-region Transit Gateway Peering connection.
-
-![Virginia Transit Gateway Configuration](screenshots/139-virginia-transit-gateway-configuration.png)
-
-The Virginia Transit Gateway was successfully created:
-
-![Virginia Transit Gateway Created](screenshots/140-virginia-transit-gateway-created.png)
-
----
-
-### Mumbai Transit Gateway
-
-A Transit Gateway was created in the Mumbai region to act as the **requester** side.
-
-The Mumbai Transit Gateway was configured:
-
-![Mumbai Transit Gateway Configuration](screenshots/141-mumbai-transit-gateway-configuration.png)
-
-The Mumbai Transit Gateway was successfully created:
-
-![Mumbai Transit Gateway Created](screenshots/142-mumbai-transit-gateway-created.png)
-
----
-
-### Transit Gateway Peering Request
-
-The Mumbai Transit Gateway was configured to create a **Transit Gateway Peering Attachment** toward the Virginia Transit Gateway.
-
-The Virginia Transit Gateway ID was entered as the accepter Transit Gateway.
-
-![Mumbai Transit Gateway Peering Configuration](screenshots/143-mumbai-transit-gateway-peering-configuration.png)
-
-The peering request entered the pending acceptance state:
-
-![Mumbai Transit Gateway Peering Pending Acceptance](screenshots/144-mumbai-transit-gateway-peering-pending-acceptance.png)
-
----
-
-### Virginia Transit Gateway Peering Acceptance
-
-The peering request was then viewed from the Virginia region.
-
-![Virginia Transit Gateway Peering Request](screenshots/145-virginia-transit-gateway-peering-request.png)
-
-The Virginia side accepted the Transit Gateway Peering request:
-
-![Virginia Transit Gateway Peering Accepted](screenshots/146-virginia-transit-gateway-peering-accepted.png)
-
-After propagation, the Transit Gateway Peering connection became available:
-
-![Transit Gateway Peering Available](screenshots/147-transit-gateway-peering-available.png)
-
-The peering architecture was now:
-
-```text
-Mumbai Transit Gateway
-        │
-        │ Transit Gateway Peering
-        │
-        ▼
-Virginia Transit Gateway
-```
-
----
-
-### Mumbai VPC Transit Gateway Attachment
-
-The Mumbai VPC was attached to the Mumbai Transit Gateway.
-
-The VPC attachment was configured using:
-
-```text
-VPC:
-31.0.0.0/16
-
-Subnets:
-Public Subnet
-Private Subnet
-```
-
-![Mumbai VPC Transit Gateway Attachment Configuration](screenshots/148-mumbai-vpc-transit-gateway-attachment-configuration.png)
-
-The Mumbai VPC Transit Gateway attachment became available:
-
-![Mumbai VPC Transit Gateway Attachment Available](screenshots/149-mumbai-vpc-transit-gateway-attachment-available.png)
-
----
-
-### Virginia VPC Transit Gateway Attachment
-
-The Virginia VPC was attached to the Virginia Transit Gateway.
-
-The VPC attachment was configured using:
-
-```text
-VPC:
-41.0.0.0/16
-
-Subnets:
-Public Subnet
-Private Subnet
-```
-
-![Virginia VPC Transit Gateway Attachment Configuration](screenshots/150-virginia-vpc-transit-gateway-attachment-configuration.png)
-
-The Virginia VPC Transit Gateway attachment became available:
-
-![Virginia VPC Transit Gateway Attachment Available](screenshots/151-virginia-vpc-transit-gateway-attachment-available.png)
-
-At this point, the architecture contained:
-
-```text
-Mumbai VPC
-31.0.0.0/16
-     │
-     ▼
-Mumbai Transit Gateway
-     │
-     │ Transit Gateway Peering
-     │
-     ▼
-Virginia Transit Gateway
-     │
-     ▼
-Virginia VPC
-41.0.0.0/16
-```
-
----
-
-### Mumbai Route Table Configuration
-
-The Mumbai public route table was updated to send traffic destined for the Virginia VPC through the Mumbai Transit Gateway.
-
-```text
-Destination: 41.0.0.0/16
-Target:      Transit Gateway
-```
-
-![Mumbai Public Route Table Transit Gateway Route](screenshots/152-mumbai-public-route-table-transit-gateway-route.png)
-
-The Mumbai private route table was also configured with the remote Virginia CIDR:
-
-```text
-Destination: 41.0.0.0/16
-Target:      Transit Gateway
-```
-
-![Mumbai Private Route Table Transit Gateway Route](screenshots/153-mumbai-private-route-table-transit-gateway-route.png)
-
----
-
-### Virginia Route Table Configuration
-
-The Virginia public route table was updated to send traffic destined for the Mumbai VPC through the Virginia Transit Gateway.
-
-```text
-Destination: 31.0.0.0/16
-Target:      Transit Gateway
-```
-
-![Virginia Public Route Table Transit Gateway Route](screenshots/154-virginia-public-route-table-transit-gateway-route.png)
-
-The Virginia private route table was also configured with the remote Mumbai CIDR:
-
-```text
-Destination: 31.0.0.0/16
-Target:      Transit Gateway
-```
-
-![Virginia Private Route Table Transit Gateway Route](screenshots/155-virginia-private-route-table-transit-gateway-route.png)
-
-The routing configuration was therefore:
-
-```text
-Mumbai VPC Route Table
-41.0.0.0/16 → Mumbai Transit Gateway
-
-
-Virginia VPC Route Table
-31.0.0.0/16 → Virginia Transit Gateway
-```
-
----
-
-### EC2 Instances for Cross-Region Testing
-
-An EC2 instance was launched in the Mumbai public subnet for connectivity testing.
-
-![Mumbai EC2 Network Configuration](screenshots/156-mumbai-ec2-network-configuration.png)
-
-The Mumbai EC2 instance successfully entered the Running state.
-
-The private IPv4 address was used for the cross-region connectivity test.
-
-![Mumbai EC2 Running](screenshots/157-mumbai-ec2-running.png)
-
-An EC2 instance was also launched in the Virginia public subnet.
-
-![Virginia EC2 Network Configuration](screenshots/158-virginia-ec2-network-configuration.png)
-
-The Virginia EC2 instance successfully entered the Running state.
-
-The private IPv4 address was used for the cross-region connectivity test.
-
-![Virginia EC2 Running](screenshots/159-virginia-ec2-running.png)
-
----
-
-### Mumbai → Virginia Private IP Connectivity
-
-The Mumbai EC2 instance successfully pinged the private IPv4 address of the Virginia EC2 instance.
-
-```text
-Mumbai EC2
-     ↓
-Mumbai VPC Route Table
-     ↓
-41.0.0.0/16 → Transit Gateway
-     ↓
-Mumbai Transit Gateway
-     ↓
-Transit Gateway Peering
-     ↓
-Virginia Transit Gateway
-     ↓
-Virginia VPC Route Table
-     ↓
-Virginia EC2 Private IP
-```
-
-![Mumbai to Virginia Ping Success](screenshots/160-mumbai-to-virginia-ping-success.png)
-
-This confirmed successful private IPv4 connectivity from Mumbai to Virginia through Transit Gateway Peering.
-
----
-
-### Virginia → Mumbai Private IP Connectivity
-
-The reverse direction was also tested.
-
-The Virginia EC2 instance successfully pinged the private IPv4 address of the Mumbai EC2 instance.
-
-```text
-Virginia EC2
-     ↓
-Virginia VPC Route Table
-     ↓
-31.0.0.0/16 → Transit Gateway
-     ↓
-Virginia Transit Gateway
-     ↓
-Transit Gateway Peering
-     ↓
-Mumbai Transit Gateway
-     ↓
-Mumbai VPC Route Table
-     ↓
-Mumbai EC2 Private IP
-```
-
-![Virginia to Mumbai Ping Success](screenshots/161-virginia-to-mumbai-ping-success.png)
-
-This confirmed successful bidirectional private IPv4 connectivity between the Mumbai and Virginia VPCs.
-
----
-
-### Final Cross-Region Architecture
-
-The final architecture achieved in this practical was:
-
-```text
-                    AWS
-                     │
-        ┌────────────┴────────────┐
-        │                         │
-   Mumbai Region            N. Virginia Region
-   ap-south-1                us-east-1
-        │                         │
-        ▼                         ▼
-   Mumbai VPC                Virginia VPC
-   31.0.0.0/16              41.0.0.0/16
-        │                         │
-        │                         │
-        ▼                         ▼
-Mumbai Transit Gateway  ◄──►  Virginia Transit Gateway
-                           Peering
-        │                         │
-        ▼                         ▼
-    Mumbai EC2               Virginia EC2
-    Private IP               Private IP
-```
-
-The final connectivity was verified in both directions using private IPv4 addresses.
-
-This demonstrates that Transit Gateway Peering can provide private cross-region connectivity between VPCs when the Transit Gateway Peering connection, VPC attachments, and required route-table entries are correctly configured.
-
 ---
 
 ## 📸 Final AWS Resource Map
@@ -1976,38 +1067,34 @@ Mumbai Transit Gateway  ◄──────►  Virginia Transit Gateway
 
 Detailed step-by-step documentation is available for each part of the project:
 
-1. [VPC Creation and Configuration](docs/01-vpc.md)
-2. [Public and Private Subnet Configuration](docs/02-subnets.md)
-3. [Internet Gateway Configuration](docs/03-internet-gateway.md)
-4. [Route Table Configuration](docs/04-route-tables.md)
-5. [NAT Gateway Configuration](docs/05-nat-gateway.md)
-6. [EC2 Instances in Public and Private Subnets](docs/06-ec2-in-vpc.md)
-7. [EC2 User Data and Apache Automation](docs/07-ec2-user-data.md)
-8. [Security Groups](docs/08-security-groups.md)
-9. [Application Load Balancer and Target Groups](docs/09-application-load-balancer.md)
-10. [VPC Peering](docs/10-vpc-peering.md)
-11. [Transit Gateway and Transit Gateway Attachments](docs/11-transit-gateway.md)
-12. [Transit Gateway Cross-Region Peering](docs/12-transit-gateway-cross-region-peering.md)
-
-Each section includes explanations of the networking concept, configuration details, implementation steps, traffic-flow explanations, validation, and AWS Console screenshots.
+| Section | Documentation |
+|---|---|
+| 01 | [VPC](docs/01-vpc.md) |
+| 02 | [Subnets](docs/02-subnets.md) |
+| 03 | [Internet Gateway](docs/03-internet-gateway.md) |
+| 04 | [Route Tables](docs/04-route-tables.md) |
+| 05 | [NAT Gateway](docs/05-nat-gateway.md) |
+| 06 | [EC2 in VPC](docs/06-ec2-in-vpc.md) |
+| 07 | [EC2 User Data](docs/07-ec2-user-data.md) |
+| 08 | [Security Groups](docs/08-security-groups.md) |
+| 09 | [Application Load Balancer](docs/09-application-load-balancer.md) |
+| 10 | [VPC Peering](docs/10-vpc-peering.md) |
+| 11 | [Transit Gateway](docs/11-transit-gateway.md) |
+| 12 | [Transit Gateway Cross-Region Peering](docs/12-transit-gateway-cross-region-peering.md) |
 
 ---
 
-## 📁 Repository Structure
+## 🗂️ Project Structure
 
 ```text
 aws-vpc-networking-basics/
 │
-├── README.md
-├── LICENSE
-│
 ├── architecture/
-│   ├── AWS-VPC-Subnet-Routing-Architecture.png
-│   ├── AWS-VPC-EC2-NAT-Gateway-Architecture.png
 │   ├── AWS-VPC-EC2-ALB-Architecture.png
+│   ├── AWS-VPC-EC2-NAT-Gateway-Architecture.png
+│   ├── AWS-VPC-Subnet-Routing-Architecture.png
 │   ├── AWS-VPC-Peering-Architecture.png
-│   ├── AWS-VPC-Transit-Gateway-Architecture.png
-│   └── AWS-VPC-Transit-Gateway-Cross-Region-Peering-Architecture.png
+│   └── AWS-VPC-Transit-Gateway-Architecture.png
 │
 ├── docs/
 │   ├── 01-vpc.md
@@ -2023,241 +1110,141 @@ aws-vpc-networking-basics/
 │   ├── 11-transit-gateway.md
 │   └── 12-transit-gateway-cross-region-peering.md
 │
-└── screenshots/
-    ├── 01-vpc-configuration.png
-    ├── 02-vpc-created.png
-    ├── 03-public-subnet-configuration.png
-    ├── 04-private-subnet-configuration.png
-    ├── 05-subnets-created.png
-    ├── 06-internet-gateway-creation.png
-    ├── 07-internet-gateway-attached.png
-    ├── 08-public-route-table-creation.png
-    ├── 09-public-route-table-internet-route.png
-    ├── 10-public-subnet-route-table-association.png
-    ├── 11-private-route-table-creation.png
-    ├── 12-final-vpc-resource-map.png
-    ├── 13-nat-gateway-configuration.png
-    ├── 14-nat-gateway-available.png
-    ├── 15-private-route-table-nat-route-configuration.png
-    ├── 16-private-route-table-nat-route.png
-    ├── 17-public-ec2-network-configuration.png
-    ├── 18-public-ec2-running.png
-    ├── 19-public-ec2-network-details.png
-    ├── 20-public-ec2-ssh-connection.png
-    ├── 21-private-ec2-network-configuration.png
-    ├── 22-private-ec2-running.png
-    ├── 23-private-ec2-ssh-via-public-ec2.png
-    ├── 24-private-ec2-internet-test.png
-    ├── 25-final-vpc-resource-map.png
-    ├── 26-ec2-user-data-configuration.png
-    ├── 27-user-data-ec2-running.png
-    ├── 28-apache-service-running.png
-    ├── 29-user-data-localhost-test.png
-    ├── 30-user-data-browser-test.png
-    ├── 31-security-group-configuration.png
-    ├── 32-security-group-inbound-http.png
-    ├── 33-security-group-outbound-rules.png
-    ├── 34-target-group-configuration.png
-    ├── 35-target-group-registered-targets.png
-    ├── 36-target-group-health-status.png
-    ├── 37-application-load-balancer-configuration.png
-    ├── 38-alb-network-configuration.png
-    ├── 39-alb-security-group-http-rule.png
-    ├── 40-alb-listener-target-group.png
-    ├── 41-alb-dns-details.png
-    ├── 42-alb-application-test.png
-    ├── 43-second-public-ec2-configuration.png
-    ├── 44-second-public-ec2-running.png
-    ├── 45-second-public-ec2-application-test.png
-    ├── 46-target-group-two-public-ec2.png
-    ├── 47-target-group-final-health-status.png
-    ├── 48-alb-backend-response-1.png
-    ├── 49-alb-backend-response-2.png
-    ├── 50-virginia-vpc-configuration.png
-    ├── 51-virginia-public-subnet-configuration.png
-    ├── 52-virginia-private-subnet-configuration.png
-    ├── 53-virginia-internet-gateway.png
-    ├── 54-virginia-route-table-configuration.png
-    ├── 55-vpc-peering-request-configuration.png
-    ├── 56-vpc-peering-pending-acceptance.png
-    ├── 57-vpc-peering-acceptance.png
-    ├── 58-vpc-peering-active.png
-    ├── 59-mumbai-ec2-network-configuration.png
-    ├── 60-virginia-ec2-network-configuration.png
-    ├── 61-mumbai-ec2-running.png
-    ├── 62-virginia-ec2-running.png
-    ├── 63-mumbai-to-virginia-ping-failed.png
-    ├── 64-mumbai-route-table-peering-route.png
-    ├── 65-virginia-route-table-peering-route.png
-    ├── 66-mumbai-to-virginia-ping-success.png
-    ├── 67-virginia-to-mumbai-ping-success.png
-    ├── 68-vpc-71-configuration.png
-    ├── 69-vpc-71-created.png
-    ├── 70-vpc-10-configuration.png
-    ├── 71-vpc-10-created.png
-    ├── 72-demo-public-subnet-configuration.png
-    ├── 73-demo-public-subnet-created.png
-    ├── 74-demo-private-subnet-configuration.png
-    ├── 75-demo-private-subnet-created.png
-    ├── 76-demo-internet-gateway-creation.png
-    ├── 77-demo-internet-gateway-attached.png
-    ├── 78-demo-public-route-table-creation.png
-    ├── 79-demo-public-route-table-internet-route.png
-    ├── 80-demo-public-subnet-route-table-association.png
-    ├── 81-demo-private-route-table-creation.png
-    ├── 82-demo-private-subnet-route-table-association.png
-    ├── 83-redshift-public-subnet-configuration.png
-    ├── 84-redshift-public-subnet-created.png
-    ├── 85-redshift-private-subnet-configuration.png
-    ├── 86-redshift-private-subnet-created.png
-    ├── 87-redshift-internet-gateway-creation.png
-    ├── 88-redshift-internet-gateway-attached.png
-    ├── 89-redshift-public-route-table-creation.png
-    ├── 90-redshift-public-route-table-internet-route.png
-    ├── 91-redshift-public-subnet-route-table-association.png
-    ├── 92-redshift-private-route-table-creation.png
-    ├── 93-redshift-private-subnet-route-table-association.png
-    ├── 94-three-vpc-resource-map.png
-    ├── 95-transit-gateway-configuration.png
-    ├── 96-transit-gateway-created.png
-    ├── 97-aws-course-transit-gateway-attachment-configuration.png
-    ├── 98-aws-course-transit-gateway-attachment-available.png
-    ├── 99-demo-course-transit-gateway-attachment-configuration.png
-    ├── 100-demo-course-transit-gateway-attachment-available.png
-    ├── 101-redshift-transit-gateway-attachment-configuration.png
-    ├── 102-redshift-transit-gateway-attachment-available.png
-    ├── 103-transit-gateway-all-attachments.png
-    ├── 104-aws-course-public-route-table-transit-gateway-routes.png
-    ├── 105-aws-course-private-route-table-transit-gateway-routes.png
-    ├── 106-demo-public-route-table-transit-gateway-routes.png
-    ├── 107-demo-private-route-table-transit-gateway-routes.png
-    ├── 108-redshift-public-route-table-transit-gateway-routes.png
-    ├── 109-redshift-private-route-table-transit-gateway-routes.png
-    ├── 110-final-transit-gateway-routing-configuration.png
-    ├── 111-aws-course-ec2-network-configuration.png
-    ├── 112-aws-course-ec2-running.png
-    ├── 113-demo-course-ec2-network-configuration.png
-    ├── 114-demo-course-ec2-running.png
-    ├── 115-redshift-ec2-network-configuration.png
-    ├── 116-redshift-ec2-running.png
-    ├── 117-three-vpc-ec2-private-ip-details.png
-    ├── 118-aws-course-to-demo-ping-success.png
-    ├── 119-aws-course-to-redshift-ping-success.png
-    ├── 120-demo-to-aws-course-ping-success.png
-    ├── 121-demo-to-redshift-ping-success.png
-    ├── 122-redshift-to-aws-course-ping-success.png
-    ├── 123-redshift-to-demo-ping-success.png
-    ├── 124-transit-gateway-route-removed-negative-test.png
-    ├── 125-transit-gateway-connectivity-blocked.png
-    ├── 126-final-transit-gateway-connectivity.png
-    ├── 127-virginia-vpc-configuration.png
-    ├── 128-virginia-vpc-created.png
-    ├── 129-virginia-public-subnet-configuration.png
-    ├── 130-virginia-private-subnet-configuration.png
-    ├── 131-virginia-subnets-created.png
-    ├── 132-virginia-internet-gateway-creation.png
-    ├── 133-virginia-internet-gateway-attached.png
-    ├── 134-virginia-public-route-table-creation.png
-    ├── 135-virginia-public-route-table-internet-route.png
-    ├── 136-virginia-public-subnet-route-table-association.png
-    ├── 137-virginia-private-route-table-creation.png
-    ├── 138-virginia-private-subnet-route-table-association.png
-    ├── 139-virginia-transit-gateway-configuration.png
-    ├── 140-virginia-transit-gateway-created.png
-    ├── 141-mumbai-transit-gateway-configuration.png
-    ├── 142-mumbai-transit-gateway-created.png
-    ├── 143-mumbai-transit-gateway-peering-configuration.png
-    ├── 144-mumbai-transit-gateway-peering-pending-acceptance.png
-    ├── 145-virginia-transit-gateway-peering-request.png
-    ├── 146-virginia-transit-gateway-peering-accepted.png
-    ├── 147-transit-gateway-peering-available.png
-    ├── 148-mumbai-vpc-transit-gateway-attachment-configuration.png
-    ├── 149-mumbai-vpc-transit-gateway-attachment-available.png
-    ├── 150-virginia-vpc-transit-gateway-attachment-configuration.png
-    ├── 151-virginia-vpc-transit-gateway-attachment-available.png
-    ├── 152-mumbai-public-route-table-transit-gateway-route.png
-    ├── 153-mumbai-private-route-table-transit-gateway-route.png
-    ├── 154-virginia-public-route-table-transit-gateway-route.png
-    ├── 155-virginia-private-route-table-transit-gateway-route.png
-    ├── 156-mumbai-ec2-network-configuration.png
-    ├── 157-mumbai-ec2-running.png
-    ├── 158-virginia-ec2-network-configuration.png
-    ├── 159-virginia-ec2-running.png
-    ├── 160-mumbai-to-virginia-ping-success.png
-    └── 161-virginia-to-mumbai-ping-success.png
+├── screenshots/
+│   ├── 01-vpc-configuration.png
+│   ├── 02-vpc-created.png
+│   ├── 03-public-subnet-configuration.png
+│   ├── 04-private-subnet-configuration.png
+│   ├── 05-subnets-created.png
+│   ├── 06-internet-gateway-creation.png
+│   ├── 07-internet-gateway-attached.png
+│   ├── 08-public-route-table-creation.png
+│   ├── 09-public-route-table-internet-route.png
+│   ├── 10-public-subnet-route-table-association.png
+│   ├── 11-private-route-table-creation.png
+│   ├── 12-final-vpc-resource-map.png
+│   ├── ...
+│   └── 161-virginia-to-mumbai-ping-success.png
+│
+└── README.md
 ```
 
 ---
 
-## 🧠 Key Concepts Learned
+## 📈 Skills Demonstrated
 
-Through this project, I gained hands-on experience with:
+This project demonstrates practical experience with:
 
-- Amazon VPC architecture
-- IPv4 CIDR addressing
-- Public and private subnet design
-- Availability Zones
-- Internet Gateways
-- AWS route tables
-- Local VPC routing
-- Default routes (`0.0.0.0/0`)
-- Longest prefix matching
-- Subnet-to-route-table associations
-- Public vs. private subnet routing
-- NAT Gateway configuration
-- Private subnet outbound Internet connectivity
-- Public and private EC2 deployment
-- Public vs. private IPv4 addressing
-- SSH connectivity
-- Accessing private resources through a public instance
-- Testing network connectivity
-- AWS VPC Resource Map
-- AWS Security Groups
-- Security Group inbound rules
-- Security Group outbound rules
-- Stateful Security Groups
-- HTTP access on TCP port `80`
-- SSH access on TCP port `22`
-- Security Groups vs. route tables
-- EC2 User Data and instance bootstrapping
-- Automated Apache installation
-- Automated server initialization using Bash
-- HTTP service validation using `curl`
-- Application Load Balancers
+- AWS VPC networking
+- IPv4 CIDR planning
+- Public and private subnet architecture
+- Internet Gateway
+- NAT Gateway
+- Route tables and routing
+- Security Groups
+- EC2
+- EC2 User Data
+- Apache web server
+- Application Load Balancer
 - Target Groups
-- EC2 target registration
-- ALB listeners
-- ALB security groups
-- Target health checks
-- Healthy and unhealthy targets
-- Internet-facing load balancers
-- Load balancing across multiple EC2 instances
-- ALB DNS names
-- Backend response validation
 - VPC Peering
-- Cross-region VPC connectivity
-- VPC Peering requester and accepter concepts
-- VPC Peering connection states
-- Cross-region private IPv4 communication
-- Route-table configuration for VPC Peering
-- Bidirectional VPC Peering connectivity
-- VPC Peering limitations
-- Non-transitive VPC routing
 - AWS Transit Gateway
 - Transit Gateway VPC attachments
-- Centralized connectivity between multiple VPCs
-- Transit Gateway route-table configuration
-- Private IPv4 communication through Transit Gateway
-- Transit Gateway connectivity validation
-- Negative connectivity testing
-- Transit Gateway routing dependencies
+- Transit Gateway route tables
 - Transit Gateway Peering
-- Cross-region Transit Gateway connectivity
-- Transit Gateway requester and accepter concepts
-- Transit Gateway Peering connection states
-- Cross-region Transit Gateway route configuration
-- Bidirectional private connectivity through Transit Gateway Peering
-- VPC Peering vs. Transit Gateway architecture
+- Cross-region networking
+- Private IPv4 connectivity
+- Network troubleshooting
+- Connectivity validation
+- Negative testing
+- AWS VPC Resource Map
+- AWS Management Console
+
+---
+
+## 🧪 Connectivity Validation
+
+The project included multiple connectivity tests.
+
+### VPC Peering
+
+Private connectivity was validated between:
+
+```text
+Mumbai VPC
+31.0.0.0/16
+        ↕
+VPC Peering
+        ↕
+N. Virginia VPC
+41.0.0.0/16
+```
+
+### Transit Gateway
+
+Connectivity was validated between the three VPCs:
+
+```text
+31.0.0.0/16
+       ↕
+Transit Gateway
+       ↕
+71.0.0.0/16
+
+31.0.0.0/16
+       ↕
+Transit Gateway
+       ↕
+10.0.0.0/16
+
+71.0.0.0/16
+       ↕
+Transit Gateway
+       ↕
+10.0.0.0/16
+```
+
+A negative test was also performed by removing a required Transit Gateway route and verifying that connectivity was blocked.
+
+### Transit Gateway Cross-Region Peering
+
+Private IPv4 connectivity was successfully validated in both directions:
+
+```text
+Mumbai EC2
+31.0.x.x
+    ↓
+Mumbai Transit Gateway
+    ↓
+Transit Gateway Peering
+    ↓
+Virginia Transit Gateway
+    ↓
+Virginia EC2
+41.0.x.x
+```
+
+and:
+
+```text
+Virginia EC2
+41.0.x.x
+    ↓
+Virginia Transit Gateway
+    ↓
+Transit Gateway Peering
+    ↓
+Mumbai Transit Gateway
+    ↓
+Mumbai EC2
+31.0.x.x
+```
+
+The final test confirmed **bidirectional private IPv4 connectivity** between the Mumbai and N. Virginia EC2 instances.
+
+---
+
+## 🧠 Key Learning Outcomes
 
 One of the key concepts demonstrated by this project is that simply naming a subnet **public** or **private** does not determine its networking behavior.
 
@@ -2359,13 +1346,3 @@ The architecture focuses on understanding AWS VPC networking concepts and is **n
 The VPC CIDR `31.0.0.0/16` follows the addressing used during the training lab. For real-world private VPC designs, RFC 1918 private address ranges such as `10.0.0.0/8`, `172.16.0.0/12`, or `192.168.0.0/16` would normally be used.
 
 The Security Group configuration used in this lab allows SSH and HTTP from `0.0.0.0/0` for learning and testing purposes. Restricting administrative access to trusted source addresses or using managed access mechanisms is preferable in production environments.
-
-The Application Load Balancer and Target Group configuration in this project is intended for learning and demonstration purposes.
-
-The VPC Peering configuration is also intended for learning and demonstration purposes. VPC Peering is a one-to-one connection and does not provide transitive routing between multiple VPCs.
-
-The Transit Gateway configuration is also intended for learning and demonstration purposes. Transit Gateway provides centralized connectivity between multiple attached VPCs, but the appropriate route-table configuration is still required for traffic to reach the intended destination.
-
-The Transit Gateway Cross-Region Peering configuration is also intended for learning and demonstration purposes. Cross-region connectivity requires Transit Gateway Peering, appropriate VPC attachments, remote VPC routes, and compatible security rules.
-
-The project will continue to evolve as additional AWS networking concepts are implemented.
