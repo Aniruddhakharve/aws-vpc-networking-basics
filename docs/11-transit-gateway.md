@@ -1,246 +1,353 @@
-# AWS Transit Gateway and Transit Gateway Attachments
+# Section 11: Transit Gateway
 
 ## Overview
 
-AWS Transit Gateway provides a centralized way to connect multiple VPCs through a single networking hub.
+AWS Transit Gateway is a network transit hub that can be used to connect multiple VPCs and other networks through a centralized networking service.
 
-In the previous section, VPC Peering was used to establish connectivity between two VPCs. While VPC Peering works well for a small number of VPCs, managing many individual peering connections can become difficult.
+In the previous section, I used VPC Peering to connect two VPCs. VPC Peering works well when only a small number of VPCs need to communicate, but managing many individual peering connections can become difficult as the environment grows.
 
-Transit Gateway provides a hub-and-spoke architecture where multiple VPCs can connect to a single Transit Gateway through Transit Gateway attachments.
+In this section, I created and configured an AWS Transit Gateway in the Mumbai (`ap-south-1`) region and used it to connect multiple VPCs.
 
-In this project, three VPCs were connected using a single Transit Gateway:
+The practical implementation contains three VPCs:
 
-**AWS Course VPC** → `31.0.0.0/16`
+- AWS Course VPC — `31.0.0.0/16`
+- Demo Course VPC — `71.0.0.0/16`
+- Redshift VPC — `10.0.0.0/16`
 
-**Demo Course VPC** → `71.0.0.0/16`
+The Transit Gateway provides centralized connectivity between these VPCs.
 
-**Redshift VPC** → `10.0.0.0/16`
-
-Each VPC contains public and private subnets with their own route tables.
-
-The Transit Gateway attachments provide the connection between the VPCs and the Transit Gateway, while routes in the VPC route tables determine where traffic destined for another VPC should be forwarded.
+The final connectivity was tested using EC2 instances in all three VPCs. Communication was successfully verified in both directions between all three VPCs using their private IP addresses.
 
 ---
 
-## Architecture
+# 1. What is AWS Transit Gateway?
 
-The final architecture contains three VPCs connected through a single Transit Gateway.
+AWS Transit Gateway is a managed network transit hub that allows multiple VPCs and other networks to connect through a centralized gateway.
 
-![AWS Transit Gateway Architecture](../architecture/AWS-VPC-Transit-Gateway-Architecture.png)
+Instead of creating individual connections between every VPC, each VPC can be attached to the Transit Gateway.
 
-The architecture follows a hub-and-spoke model:
+The architecture becomes:
 
-- AWS Course VPC: `31.0.0.0/16`
-- Demo Course VPC: `71.0.0.0/16`
-- Redshift VPC: `10.0.0.0/16`
-- One Transit Gateway
-- Three Transit Gateway attachments
+```text
+VPC-A
+   |
+   |
+   v
+Transit Gateway
+   ^
+   |
+   |
+VPC-B
 
-### AWS Resource Map
+VPC-C
+   |
+   |
+   +----> Transit Gateway
+```
 
-The following screenshot shows the three VPC environments and their networking resources before establishing Transit Gateway connectivity.
+The Transit Gateway acts as a central networking hub.
 
-![Three VPC Resource Map](../screenshots/94-three-vpc-resource-map.png)
+For this practical implementation:
 
----
+```text
+AWS Course VPC
+31.0.0.0/16
+        |
+        |
+        v
+   Transit Gateway
+        ^
+        |
+        |
+Demo Course VPC
+71.0.0.0/16
 
-# 1. Creating the Additional VPCs
+Redshift VPC
+10.0.0.0/16
+        |
+        |
+        +----> Transit Gateway
+```
 
-The existing VPC with CIDR `31.0.0.0/16` from the previous sections was reused.
-
-Two additional VPCs were created for the Transit Gateway demonstration.
-
-The VPC CIDR ranges were:
-
-| VPC | CIDR |
-|---|---|
-| AWS Course VPC | `31.0.0.0/16` |
-| Demo Course VPC | `71.0.0.0/16` |
-| Redshift VPC | `10.0.0.0/16` |
-
-The CIDR ranges are non-overlapping, allowing routing between the VPCs.
-
----
-
-## VPC `71.0.0.0/16`
-
-The first additional VPC was created with the CIDR:
-
-`71.0.0.0/16`
-
-### VPC Configuration
-
-![VPC 71 Configuration](../screenshots/68-vpc-71-configuration.png)
-
-The VPC was created using the VPC-only option with the CIDR range `71.0.0.0/16`.
-
-### VPC Created
-
-![VPC 71 Created](../screenshots/69-vpc-71-created.png)
-
-The VPC successfully entered the available state.
+Once the VPCs are attached and the appropriate routes are configured, resources in the connected VPCs can communicate using private IP addresses.
 
 ---
 
-## VPC `10.0.0.0/16`
+# 2. Why Do We Need Transit Gateway?
 
-The second additional VPC was created with:
+Suppose an organization has only two VPCs:
 
-`10.0.0.0/16`
+```text
+VPC-A <--------> VPC-B
+```
 
-### VPC Configuration
+A VPC Peering connection can be sufficient.
 
-![VPC 10 Configuration](../screenshots/70-vpc-10-configuration.png)
+However, imagine an environment containing:
 
-### VPC Created
+```text
+VPC-A
+VPC-B
+VPC-C
+VPC-D
+VPC-E
+VPC-F
+```
 
-![VPC 10 Created](../screenshots/71-vpc-10-created.png)
+With VPC Peering, many individual connections would have to be created and maintained.
 
-The VPC successfully entered the available state.
+The networking architecture can quickly become difficult to manage.
+
+Transit Gateway provides a centralized alternative:
+
+```text
+                 VPC-A
+                   |
+                   |
+VPC-B -------- Transit Gateway -------- VPC-C
+                   |
+                   |
+                 VPC-D
+                   |
+                   |
+                 VPC-E
+```
+
+Each VPC only needs an attachment to the Transit Gateway.
+
+This makes the overall network architecture easier to manage and scale.
 
 ---
 
-# 2. Creating Subnets for the `71.0.0.0/16` VPC
+# 3. What Problem Does Transit Gateway Solve?
 
-The `71.0.0.0/16` VPC was configured with separate public and private subnets.
+The main problem Transit Gateway solves is **complex connectivity between multiple networks**.
 
-The subnet ranges were:
+Without a centralized networking hub:
 
-- Public Subnet: `71.0.1.0/24`
-- Private Subnet: `71.0.2.0/24`
+```text
+VPC-A -------- VPC-B
+  | \            / |
+  |  \          /  |
+  |   \        /   |
+  |    \      /    |
+  |     \    /     |
+  |      \  /      |
+  VPC-C -------- VPC-D
+```
 
-## Public Subnet
+As the number of VPCs increases, the number of connections and routing relationships can become difficult to manage.
 
-![Demo Public Subnet Configuration](../screenshots/72-demo-public-subnet-configuration.png)
+Transit Gateway provides a centralized architecture:
 
-The public subnet was created using:
+```text
+                 VPC-A
+                   |
+                   |
+                 VPC-B
+                   |
+                   v
+            +-------------+
+            |   Transit   |
+            |   Gateway   |
+            +-------------+
+              ^    ^    ^
+              |    |    |
+            VPC-C VPC-D VPC-E
+```
 
-- VPC CIDR: `71.0.0.0/16`
-- Subnet CIDR: `71.0.1.0/24`
+In this lab, I used three VPCs to demonstrate this centralized connectivity model.
 
-### Public Subnet Created
+---
 
-![Demo Public Subnet Created](../screenshots/73-demo-public-subnet-created.png)
+# 4. VPCs Used in This Lab
+
+The practical implementation used the following VPCs:
+
+| VPC | CIDR | Purpose |
+|---|---|---|
+| AWS Course VPC | `31.0.0.0/16` | Primary VPC |
+| Demo Course VPC | `71.0.0.0/16` | Additional VPC |
+| Redshift VPC | `10.0.0.0/16` | Additional VPC |
+
+The Transit Gateway was used as the central networking hub.
+
+```text
+                 AWS Course VPC
+                  31.0.0.0/16
+                       |
+                       |
+                       v
+                +-------------+
+                |   Transit   |
+                |   Gateway   |
+                +-------------+
+                   ^        ^
+                   |        |
+                   |        |
+          Demo Course VPC   Redshift VPC
+             71.0.0.0/16    10.0.0.0/16
+```
+
+---
+
+# 5. Architecture
+
+![AWS VPC Transit Gateway Architecture](../architecture/AWS-VPC-Transit-Gateway-Architecture.png)
+
+The architecture contains:
+
+- Three VPCs.
+- Public and private subnets.
+- Internet Gateways.
+- Route tables.
+- Transit Gateway.
+- Transit Gateway VPC attachments.
+- EC2 instances used for connectivity testing.
+
+The Transit Gateway provides the centralized path between the three VPCs.
+
+---
+
+# 6. Create Demo Course VPC
+
+The Demo Course VPC was created with the CIDR:
+
+```text
+71.0.0.0/16
+```
+
+![Demo Course VPC Configuration](../screenshots/68-vpc-71-configuration.png)
+
+The VPC was successfully created.
+
+![Demo Course VPC Created](../screenshots/69-vpc-71-created.png)
+
+---
+
+# 7. Create Redshift VPC
+
+The Redshift VPC was created with the CIDR:
+
+```text
+10.0.0.0/16
+```
+
+![Redshift VPC Configuration](../screenshots/70-vpc-10-configuration.png)
+
+The VPC was successfully created.
+
+![Redshift VPC Created](../screenshots/71-vpc-10-created.png)
+
+---
+
+# 8. Create Demo Course Public Subnet
+
+A public subnet was created inside the Demo Course VPC.
+
+![Demo Course Public Subnet Configuration](../screenshots/72-demo-public-subnet-configuration.png)
 
 The public subnet was successfully created.
 
-## Private Subnet
-
-![Demo Private Subnet Configuration](../screenshots/74-demo-private-subnet-configuration.png)
-
-The private subnet was created using:
-
-- VPC CIDR: `71.0.0.0/16`
-- Subnet CIDR: `71.0.2.0/24`
-
-### Private Subnet Created
-
-![Demo Private Subnet Created](../screenshots/75-demo-private-subnet-created.png)
-
-The private subnet was successfully created without automatic public IPv4 assignment.
+![Demo Course Public Subnet Created](../screenshots/73-demo-public-subnet-created.png)
 
 ---
 
-# 3. Internet Gateway for the `71.0.0.0/16` VPC
+# 9. Create Demo Course Private Subnet
 
-An Internet Gateway was created for the new VPC.
+A private subnet was created inside the Demo Course VPC.
 
-### Internet Gateway Creation
+![Demo Course Private Subnet Configuration](../screenshots/74-demo-private-subnet-configuration.png)
 
-![Demo Internet Gateway Creation](../screenshots/76-demo-internet-gateway-creation.png)
+The private subnet was successfully created.
 
-### Internet Gateway Attached
-
-![Demo Internet Gateway Attached](../screenshots/77-demo-internet-gateway-attached.png)
-
-The Internet Gateway was attached to the `71.0.0.0/16` VPC.
+![Demo Course Private Subnet Created](../screenshots/75-demo-private-subnet-created.png)
 
 ---
 
-# 4. Route Tables for the `71.0.0.0/16` VPC
+# 10. Create Demo Course Internet Gateway
 
-Separate public and private route tables were created.
+An Internet Gateway was created for the Demo Course VPC.
 
-## Public Route Table
+![Demo Course Internet Gateway Creation](../screenshots/76-demo-internet-gateway-creation.png)
 
-![Demo Public Route Table Creation](../screenshots/78-demo-public-route-table-creation.png)
+The Internet Gateway was attached to the Demo Course VPC.
 
-The public route table was configured with the Internet Gateway route:
+![Demo Course Internet Gateway Attached](../screenshots/77-demo-internet-gateway-attached.png)
 
-`0.0.0.0/0 → Internet Gateway`
+---
 
-![Demo Public Route Table Internet Route](../screenshots/79-demo-public-route-table-internet-route.png)
+# 11. Configure Demo Course Public Route Table
 
-The public subnet was then associated with the public route table.
+A public route table was created for the Demo Course public subnet.
 
-![Demo Public Subnet Route Table Association](../screenshots/80-demo-public-subnet-route-table-association.png)
+![Demo Course Public Route Table Creation](../screenshots/78-demo-public-route-table-creation.png)
 
-## Private Route Table
+An Internet Gateway route was added to provide Internet connectivity.
 
-A separate private route table was created for the private subnet.
+![Demo Course Public Route Table Internet Route](../screenshots/79-demo-public-route-table-internet-route.png)
 
-![Demo Private Route Table Creation](../screenshots/81-demo-private-route-table-creation.png)
+The public subnet was associated with the public route table.
+
+![Demo Course Public Subnet Route Table Association](../screenshots/80-demo-public-subnet-route-table-association.png)
+
+---
+
+# 12. Configure Demo Course Private Route Table
+
+A private route table was created for the Demo Course private subnet.
+
+![Demo Course Private Route Table Creation](../screenshots/81-demo-private-route-table-creation.png)
 
 The private subnet was associated with the private route table.
 
-![Demo Private Subnet Route Table Association](../screenshots/82-demo-private-subnet-route-table-association.png)
-
-The private route table did not receive an Internet Gateway route.
+![Demo Course Private Subnet Route Table Association](../screenshots/82-demo-private-subnet-route-table-association.png)
 
 ---
 
-# 5. Creating Subnets for the `10.0.0.0/16` VPC
+# 13. Create Redshift Public Subnet
 
-The second new VPC was configured with:
-
-- Public Subnet: `10.0.1.0/24`
-- Private Subnet: `10.0.2.0/24`
-
-## Public Subnet
+A public subnet was created inside the Redshift VPC.
 
 ![Redshift Public Subnet Configuration](../screenshots/83-redshift-public-subnet-configuration.png)
 
-The public subnet was created inside the `10.0.0.0/16` VPC.
+The public subnet was successfully created.
 
 ![Redshift Public Subnet Created](../screenshots/84-redshift-public-subnet-created.png)
 
-## Private Subnet
+---
+
+# 14. Create Redshift Private Subnet
+
+A private subnet was created inside the Redshift VPC.
 
 ![Redshift Private Subnet Configuration](../screenshots/85-redshift-private-subnet-configuration.png)
 
-The private subnet was configured with:
-
-`10.0.2.0/24`
+The private subnet was successfully created.
 
 ![Redshift Private Subnet Created](../screenshots/86-redshift-private-subnet-created.png)
 
 ---
 
-# 6. Internet Gateway for the `10.0.0.0/16` VPC
+# 15. Create Redshift Internet Gateway
 
-An Internet Gateway was created and attached to the VPC.
-
-### Internet Gateway Creation
+An Internet Gateway was created for the Redshift VPC.
 
 ![Redshift Internet Gateway Creation](../screenshots/87-redshift-internet-gateway-creation.png)
 
-### Internet Gateway Attached
+The Internet Gateway was attached to the Redshift VPC.
 
 ![Redshift Internet Gateway Attached](../screenshots/88-redshift-internet-gateway-attached.png)
 
 ---
 
-# 7. Route Tables for the `10.0.0.0/16` VPC
+# 16. Configure Redshift Public Route Table
 
-A public and private route table were created.
-
-## Public Route Table
+A public route table was created for the Redshift public subnet.
 
 ![Redshift Public Route Table Creation](../screenshots/89-redshift-public-route-table-creation.png)
 
-The public route table was configured with:
-
-`0.0.0.0/0 → Internet Gateway`
+An Internet Gateway route was added to the public route table.
 
 ![Redshift Public Route Table Internet Route](../screenshots/90-redshift-public-route-table-internet-route.png)
 
@@ -248,9 +355,11 @@ The public subnet was associated with the public route table.
 
 ![Redshift Public Subnet Route Table Association](../screenshots/91-redshift-public-subnet-route-table-association.png)
 
-## Private Route Table
+---
 
-The private route table was created separately.
+# 17. Configure Redshift Private Route Table
+
+A private route table was created for the Redshift private subnet.
 
 ![Redshift Private Route Table Creation](../screenshots/92-redshift-private-route-table-creation.png)
 
@@ -260,465 +369,761 @@ The private subnet was associated with the private route table.
 
 ---
 
-# 8. Three-VPC Infrastructure
+# 18. Verify the Three-VPC Environment
 
-At this stage, the project contained three VPCs:
+At this stage, the environment contained three separate VPCs:
 
-- `31.0.0.0/16` — AWS Course VPC
-- `71.0.0.0/16` — Demo Course VPC
-- `10.0.0.0/16` — Redshift VPC
+```text
+AWS Course VPC
+31.0.0.0/16
 
-Each VPC had its own networking resources.
+Demo Course VPC
+71.0.0.0/16
+
+Redshift VPC
+10.0.0.0/16
+```
+
+The three-VPC environment was verified using the AWS resource map.
 
 ![Three VPC Resource Map](../screenshots/94-three-vpc-resource-map.png)
 
-The three VPCs were now ready to be connected through a Transit Gateway.
+At this point, the VPCs existed independently.
+
+The next step was to create the Transit Gateway and use it to connect these VPCs.
 
 ---
 
-# 9. Creating the Transit Gateway
+# 19. Create Transit Gateway
 
-AWS Transit Gateway was created to provide a centralized networking hub for the three VPCs.
-
-The Transit Gateway acts as the central point through which the VPCs communicate.
-
-### Transit Gateway Configuration
+A Transit Gateway was created to act as the central networking hub.
 
 ![Transit Gateway Configuration](../screenshots/95-transit-gateway-configuration.png)
 
-The Transit Gateway was configured within the AWS account.
-
-No cross-account sharing was required for this lab.
-
-### Transit Gateway Created
+The Transit Gateway was successfully created.
 
 ![Transit Gateway Created](../screenshots/96-transit-gateway-created.png)
 
-The Transit Gateway successfully became available.
+The Transit Gateway now acts as the central point through which the VPCs can communicate.
+
+```text
+                  AWS Course VPC
+                  31.0.0.0/16
+                       |
+                       |
+                       v
+                +-------------+
+                |   Transit   |
+                |   Gateway   |
+                +-------------+
+                       ^
+                       |
+                 +-----+-----+
+                 |           |
+                 |           |
+          Demo Course VPC   Redshift VPC
+           71.0.0.0/16     10.0.0.0/16
+```
 
 ---
 
-# 10. Transit Gateway Attachments
+# 20. Attach AWS Course VPC to Transit Gateway
 
-Creating the Transit Gateway alone does not connect the VPCs.
+The AWS Course VPC was attached to the Transit Gateway.
 
-Each VPC must be attached to the Transit Gateway.
+The attachment was configured using:
 
-Three Transit Gateway attachments were created:
+```text
+Attachment Type: VPC
+VPC: AWS Course VPC
+```
 
-- `31.0.0.0/16` → Transit Gateway
-- `71.0.0.0/16` → Transit Gateway
-- `10.0.0.0/16` → Transit Gateway
-
----
-
-## AWS Course VPC Attachment
-
-The existing `31.0.0.0/16` VPC was attached to the Transit Gateway.
+The required subnets were selected for the attachment.
 
 ![AWS Course Transit Gateway Attachment Configuration](../screenshots/97-aws-course-transit-gateway-attachment-configuration.png)
 
-After provisioning, the attachment became available.
+The attachment became available.
 
 ![AWS Course Transit Gateway Attachment Available](../screenshots/98-aws-course-transit-gateway-attachment-available.png)
 
 ---
 
-## Demo Course VPC Attachment
+# 21. Attach Demo Course VPC to Transit Gateway
 
-The `71.0.0.0/16` VPC was attached to the same Transit Gateway.
+The Demo Course VPC was attached to the same Transit Gateway.
 
 ![Demo Course Transit Gateway Attachment Configuration](../screenshots/99-demo-course-transit-gateway-attachment-configuration.png)
 
-The attachment successfully became available.
+The attachment became available.
 
 ![Demo Course Transit Gateway Attachment Available](../screenshots/100-demo-course-transit-gateway-attachment-available.png)
 
 ---
 
-## Redshift VPC Attachment
+# 22. Attach Redshift VPC to Transit Gateway
 
-The `10.0.0.0/16` VPC was also attached to the Transit Gateway.
+The Redshift VPC was also attached to the Transit Gateway.
 
 ![Redshift Transit Gateway Attachment Configuration](../screenshots/101-redshift-transit-gateway-attachment-configuration.png)
 
-The attachment successfully became available.
+The attachment became available.
 
 ![Redshift Transit Gateway Attachment Available](../screenshots/102-redshift-transit-gateway-attachment-available.png)
 
----
+At this point, all three VPCs were attached to the same Transit Gateway.
 
-# 11. Final Transit Gateway Attachments
+![Transit Gateway All Attachments](../screenshots/103-transit-gateway-all-attachments.png)
 
-All three VPCs were now attached to the same Transit Gateway.
+The centralized architecture was now:
 
-![All Transit Gateway Attachments](../screenshots/103-transit-gateway-all-attachments.png)
-
-All three attachments were available.
-
-The final attachment structure was:
-
-- AWS Course VPC → Transit Gateway
-- Demo Course VPC → Transit Gateway
-- Redshift VPC → Transit Gateway
-
----
-
-# 12. Updating VPC Route Tables
-
-Although the VPCs were attached to the Transit Gateway, connectivity between the VPCs was not yet established.
-
-The VPC route tables needed routes that directed traffic for the other VPC CIDR ranges toward the Transit Gateway.
-
-The routing model was:
-
-### AWS Course VPC
-
-- `71.0.0.0/16 → Transit Gateway`
-- `10.0.0.0/16 → Transit Gateway`
-
-### Demo Course VPC
-
-- `31.0.0.0/16 → Transit Gateway`
-- `10.0.0.0/16 → Transit Gateway`
-
-### Redshift VPC
-
-- `31.0.0.0/16 → Transit Gateway`
-- `71.0.0.0/16 → Transit Gateway`
-
-Both public and private route tables were updated for the lab.
+```text
+                         Transit Gateway
+                              |
+             +----------------+----------------+
+             |                |                |
+             |                |                |
+             v                v                v
+       AWS Course VPC   Demo Course VPC   Redshift VPC
+        31.0.0.0/16     71.0.0.0/16       10.0.0.0/16
+```
 
 ---
 
-## AWS Course VPC Public Route Table
+# 23. Configure Transit Gateway Routes
 
-The public route table for the `31.0.0.0/16` VPC was updated with routes for the other VPCs.
+Creating VPC attachments alone does not automatically provide the required routing between all VPCs.
 
-![AWS Course Public Transit Gateway Routes](../screenshots/104-aws-course-public-route-table-transit-gateway-routes.png)
+The Transit Gateway route table must contain routes for the destination VPC CIDRs.
 
-Routes included:
+The required destinations in this lab are:
 
-- `71.0.0.0/16 → Transit Gateway`
-- `10.0.0.0/16 → Transit Gateway`
+```text
+31.0.0.0/16
+71.0.0.0/16
+10.0.0.0/16
+```
 
-## AWS Course VPC Private Route Table
-
-![AWS Course Private Transit Gateway Routes](../screenshots/105-aws-course-private-route-table-transit-gateway-routes.png)
-
-The same destination VPC CIDRs were configured through the Transit Gateway.
-
----
-
-## Demo Course VPC Public Route Table
-
-The `71.0.0.0/16` VPC public route table was updated with:
-
-- `31.0.0.0/16 → Transit Gateway`
-- `10.0.0.0/16 → Transit Gateway`
-
-![Demo Public Transit Gateway Routes](../screenshots/106-demo-public-route-table-transit-gateway-routes.png)
-
-## Demo Course VPC Private Route Table
-
-![Demo Private Transit Gateway Routes](../screenshots/107-demo-private-route-table-transit-gateway-routes.png)
-
-The private route table was also updated with the routes toward the other two VPCs.
+The Transit Gateway route table was configured to associate the VPC CIDRs with their corresponding VPC attachments.
 
 ---
 
-## Redshift VPC Public Route Table
+# 24. Configure AWS Course Public Route Table
 
-The `10.0.0.0/16` VPC public route table was updated with:
+The AWS Course public route table was updated to send traffic destined for the Demo Course VPC through the Transit Gateway.
 
-- `31.0.0.0/16 → Transit Gateway`
-- `71.0.0.0/16 → Transit Gateway`
+Destination:
 
-![Redshift Public Transit Gateway Routes](../screenshots/108-redshift-public-route-table-transit-gateway-routes.png)
+```text
+71.0.0.0/16
+```
 
-## Redshift VPC Private Route Table
+Target:
 
-![Redshift Private Transit Gateway Routes](../screenshots/109-redshift-private-route-table-transit-gateway-routes.png)
+```text
+Transit Gateway
+```
 
-The private route table was also updated with routes toward the other VPCs.
+The route was also configured for the Redshift VPC.
+
+Destination:
+
+```text
+10.0.0.0/16
+```
+
+Target:
+
+```text
+Transit Gateway
+```
+
+![AWS Course Public Route Table Transit Gateway Routes](../screenshots/104-aws-course-public-route-table-transit-gateway-routes.png)
 
 ---
 
-# 13. Final Transit Gateway Routing Configuration
+# 25. Configure AWS Course Private Route Table
 
-After updating all route tables, the routing configuration was verified.
+The AWS Course private route table was updated with routes toward the other VPCs through the Transit Gateway.
+
+Routes:
+
+```text
+71.0.0.0/16 -> Transit Gateway
+10.0.0.0/16 -> Transit Gateway
+```
+
+![AWS Course Private Route Table Transit Gateway Routes](../screenshots/105-aws-course-private-route-table-transit-gateway-routes.png)
+
+---
+
+# 26. Configure Demo Course Public Route Table
+
+The Demo Course public route table was updated to send traffic toward the AWS Course and Redshift VPCs through the Transit Gateway.
+
+Routes:
+
+```text
+31.0.0.0/16 -> Transit Gateway
+10.0.0.0/16 -> Transit Gateway
+```
+
+![Demo Course Public Route Table Transit Gateway Routes](../screenshots/106-demo-public-route-table-transit-gateway-routes.png)
+
+---
+
+# 27. Configure Demo Course Private Route Table
+
+The Demo Course private route table was updated with the required Transit Gateway routes.
+
+Routes:
+
+```text
+31.0.0.0/16 -> Transit Gateway
+10.0.0.0/16 -> Transit Gateway
+```
+
+![Demo Course Private Route Table Transit Gateway Routes](../screenshots/107-demo-private-route-table-transit-gateway-routes.png)
+
+---
+
+# 28. Configure Redshift Public Route Table
+
+The Redshift public route table was updated to send traffic toward the AWS Course and Demo Course VPCs through the Transit Gateway.
+
+Routes:
+
+```text
+31.0.0.0/16 -> Transit Gateway
+71.0.0.0/16 -> Transit Gateway
+```
+
+![Redshift Public Route Table Transit Gateway Routes](../screenshots/108-redshift-public-route-table-transit-gateway-routes.png)
+
+---
+
+# 29. Configure Redshift Private Route Table
+
+The Redshift private route table was updated with the required Transit Gateway routes.
+
+Routes:
+
+```text
+31.0.0.0/16 -> Transit Gateway
+71.0.0.0/16 -> Transit Gateway
+```
+
+![Redshift Private Route Table Transit Gateway Routes](../screenshots/109-redshift-private-route-table-transit-gateway-routes.png)
+
+---
+
+# 30. Final Transit Gateway Routing Configuration
+
+After configuring the VPC route tables and Transit Gateway routes, the complete routing configuration was verified.
 
 ![Final Transit Gateway Routing Configuration](../screenshots/110-final-transit-gateway-routing-configuration.png)
 
-The route tables now provided paths between all three VPC CIDR ranges through the Transit Gateway.
+The final routing architecture was:
+
+```text
+                         Transit Gateway
+                              |
+          +-------------------+-------------------+
+          |                   |                   |
+          v                   v                   v
+     31.0.0.0/16         71.0.0.0/16         10.0.0.0/16
+     AWS Course           Demo Course           Redshift
+        VPC                   VPC                  VPC
+```
 
 ---
 
-# 14. EC2 Instances for Connectivity Testing
+# 31. Launch EC2 in AWS Course VPC
 
-To validate the Transit Gateway connectivity, one EC2 instance was launched inside each VPC.
+An EC2 instance was launched in the AWS Course VPC.
 
-The instances were placed in public subnets so they could be accessed using SSH.
-
-However, the actual VPC-to-VPC connectivity test was performed using the private IPv4 addresses of the EC2 instances.
-
-This ensures that the test demonstrates private communication between the VPCs through the Transit Gateway rather than communication through public IP addresses.
-
----
-
-## EC2 in AWS Course VPC
+The instance was placed in the public subnet so that it could be accessed using SSH.
 
 ![AWS Course EC2 Network Configuration](../screenshots/111-aws-course-ec2-network-configuration.png)
 
-The EC2 instance was launched inside the `31.0.0.0/16` VPC.
-
-### EC2 Running
+The instance was successfully launched and reached the running state.
 
 ![AWS Course EC2 Running](../screenshots/112-aws-course-ec2-running.png)
 
 ---
 
-## EC2 in Demo Course VPC
+# 32. Launch EC2 in Demo Course VPC
+
+An EC2 instance was launched in the Demo Course VPC.
 
 ![Demo Course EC2 Network Configuration](../screenshots/113-demo-course-ec2-network-configuration.png)
 
-The EC2 instance was launched inside the `71.0.0.0/16` VPC.
-
-### EC2 Running
+The instance was successfully launched and reached the running state.
 
 ![Demo Course EC2 Running](../screenshots/114-demo-course-ec2-running.png)
 
 ---
 
-## EC2 in Redshift VPC
+# 33. Launch EC2 in Redshift VPC
+
+An EC2 instance was launched in the Redshift VPC.
 
 ![Redshift EC2 Network Configuration](../screenshots/115-redshift-ec2-network-configuration.png)
 
-The EC2 instance was launched inside the `10.0.0.0/16` VPC.
-
-### EC2 Running
+The instance was successfully launched and reached the running state.
 
 ![Redshift EC2 Running](../screenshots/116-redshift-ec2-running.png)
 
 ---
 
-# 15. EC2 Private IP Addresses
+# 34. Verify EC2 Private IP Addresses
 
-The three EC2 instances received private IPv4 addresses from their respective VPC CIDR ranges.
+The private IP details of the three EC2 instances were verified before testing connectivity.
 
 ![Three VPC EC2 Private IP Details](../screenshots/117-three-vpc-ec2-private-ip-details.png)
 
-These private IP addresses were used for the connectivity tests.
+The three instances were located in separate VPCs:
 
-The instances belonged to different VPC CIDR ranges:
+```text
+AWS Course VPC
+31.0.0.0/16
 
-- AWS Course EC2 → `31.0.0.0/16`
-- Demo Course EC2 → `71.0.0.0/16`
-- Redshift EC2 → `10.0.0.0/16`
+Demo Course VPC
+71.0.0.0/16
+
+Redshift VPC
+10.0.0.0/16
+```
+
+Each EC2 instance had a private IP address within its respective VPC CIDR.
 
 ---
 
-# 16. Testing Transit Gateway Connectivity
+# 35. Test AWS Course to Demo Course Connectivity
 
-With the Transit Gateway attachments and routes configured, connectivity between the EC2 instances was tested using their private IPv4 addresses.
+From the AWS Course EC2 instance, connectivity to the Demo Course EC2 instance was tested using its private IP address.
 
-The connectivity was tested between all three VPCs.
-
----
-
-## AWS Course VPC → Demo Course VPC
-
-The EC2 instance in the `31.0.0.0/16` VPC successfully pinged the private IP of the EC2 instance in the `71.0.0.0/16` VPC.
+The ping was successful.
 
 ![AWS Course to Demo Ping Success](../screenshots/118-aws-course-to-demo-ping-success.png)
 
+This confirmed that traffic could travel:
+
+```text
+AWS Course VPC
+      |
+      v
+Transit Gateway
+      |
+      v
+Demo Course VPC
+```
+
 ---
 
-## AWS Course VPC → Redshift VPC
+# 36. Test AWS Course to Redshift Connectivity
 
-The EC2 instance in the `31.0.0.0/16` VPC successfully pinged the private IP of the EC2 instance in the `10.0.0.0/16` VPC.
+Connectivity from the AWS Course EC2 instance to the Redshift EC2 instance was tested.
+
+The ping was successful.
 
 ![AWS Course to Redshift Ping Success](../screenshots/119-aws-course-to-redshift-ping-success.png)
 
+The traffic path was:
+
+```text
+AWS Course VPC
+      |
+      v
+Transit Gateway
+      |
+      v
+Redshift VPC
+```
+
 ---
 
-## Demo Course VPC → AWS Course VPC
+# 37. Test Demo Course to AWS Course Connectivity
 
-The EC2 instance in the `71.0.0.0/16` VPC successfully pinged the private IP of the EC2 instance in the `31.0.0.0/16` VPC.
+The reverse direction was tested from the Demo Course EC2 instance to the AWS Course EC2 instance.
+
+The ping was successful.
 
 ![Demo to AWS Course Ping Success](../screenshots/120-demo-to-aws-course-ping-success.png)
 
+This confirmed bidirectional communication between the two VPCs.
+
 ---
 
-## Demo Course VPC → Redshift VPC
+# 38. Test Demo Course to Redshift Connectivity
 
-The EC2 instance in the `71.0.0.0/16` VPC successfully pinged the private IP of the EC2 instance in the `10.0.0.0/16` VPC.
+The Demo Course EC2 instance was then used to test connectivity with the Redshift EC2 instance.
+
+The ping was successful.
 
 ![Demo to Redshift Ping Success](../screenshots/121-demo-to-redshift-ping-success.png)
 
+The traffic path was:
+
+```text
+Demo Course VPC
+      |
+      v
+Transit Gateway
+      |
+      v
+Redshift VPC
+```
+
 ---
 
-## Redshift VPC → AWS Course VPC
+# 39. Test Redshift to AWS Course Connectivity
 
-The EC2 instance in the `10.0.0.0/16` VPC successfully pinged the private IP of the EC2 instance in the `31.0.0.0/16` VPC.
+Connectivity from the Redshift EC2 instance to the AWS Course EC2 instance was tested.
+
+The ping was successful.
 
 ![Redshift to AWS Course Ping Success](../screenshots/122-redshift-to-aws-course-ping-success.png)
 
+This confirmed that communication was also working from the Redshift VPC toward the AWS Course VPC.
+
 ---
 
-## Redshift VPC → Demo Course VPC
+# 40. Test Redshift to Demo Course Connectivity
 
-The EC2 instance in the `10.0.0.0/16` VPC successfully pinged the private IP of the EC2 instance in the `71.0.0.0/16` VPC.
+Finally, connectivity from the Redshift EC2 instance to the Demo Course EC2 instance was tested.
+
+The ping was successful.
 
 ![Redshift to Demo Ping Success](../screenshots/123-redshift-to-demo-ping-success.png)
 
+This completed the bidirectional connectivity testing between all three VPCs.
+
 ---
 
-# 17. Negative Connectivity Test
+# 41. Negative Test – Remove a Transit Gateway Route
 
-To verify that the Transit Gateway routes were responsible for the connectivity, a negative test was performed.
+To verify that the routing configuration was actually responsible for the connectivity, one of the Transit Gateway routes was temporarily removed.
 
-A Transit Gateway route was temporarily removed from the route table.
+![Transit Gateway Route Removed Negative Test](../screenshots/124-transit-gateway-route-removed-negative-test.png)
 
-![Transit Gateway Route Removed](../screenshots/124-transit-gateway-route-removed-negative-test.png)
+After removing the required route, connectivity was tested again.
 
-After removing the required route, the corresponding private-IP connectivity test failed.
+The communication was blocked.
 
 ![Transit Gateway Connectivity Blocked](../screenshots/125-transit-gateway-connectivity-blocked.png)
 
-This demonstrates that creating a Transit Gateway attachment alone is not enough.
+This negative test demonstrated that the Transit Gateway route table is an important part of the communication path.
 
-The VPC route tables must contain the correct destination CIDR routes pointing to the Transit Gateway.
+The VPC attachment alone is not enough.
+
+The required route must exist for traffic to reach the destination VPC.
 
 ---
 
-# 18. Restoring Connectivity
+# 42. Restore Final Transit Gateway Connectivity
 
-After the required Transit Gateway route was restored, the private-IP connectivity test succeeded again.
+The required Transit Gateway route was restored.
+
+Connectivity between the VPCs was tested again.
 
 ![Final Transit Gateway Connectivity](../screenshots/126-final-transit-gateway-connectivity.png)
 
-This confirmed that the complete networking path was functioning correctly.
+The connectivity was successfully restored.
+
+The final architecture therefore provides:
+
+```text
+AWS Course VPC
+31.0.0.0/16
+        |
+        |
+        v
+   Transit Gateway
+      /       \
+     /         \
+    v           v
+Demo Course   Redshift
+71.0.0.0/16   10.0.0.0/16
+```
 
 ---
 
-# 19. Complete Transit Gateway Traffic Flow
+# 43. Key Concepts Learned
 
-The final traffic flow can be summarized as:
+## Centralized Connectivity
 
-**Source EC2**
+Transit Gateway provides a centralized networking hub for connecting multiple VPCs.
 
-↓
-
-**VPC Route Table**
-
-↓
-
-**Destination VPC CIDR**
-
-↓
-
-**Transit Gateway**
-
-↓
-
-**Transit Gateway Attachment**
-
-↓
-
-**Destination VPC**
-
-↓
-
-**Destination EC2**
-
-For example:
-
-`31.0.0.0/16 → 71.0.0.0/16`
-
-The route table sends traffic destined for `71.0.0.0/16` to the Transit Gateway, which forwards the traffic through the appropriate VPC attachment.
-
-The same process applies between the other VPCs.
+Instead of maintaining separate peering relationships between every VPC, VPCs can attach to the same Transit Gateway.
 
 ---
 
-# VPC Peering vs Transit Gateway
+## Transit Gateway Attachments
 
-The previous section demonstrated VPC Peering between two VPCs.
+A VPC must be attached to the Transit Gateway before it can use the Transit Gateway for connectivity.
 
-With VPC Peering, two VPCs require a dedicated peering connection:
+In this lab, three VPC attachments were created:
 
-**VPC A ↔ VPC B**
+```text
+AWS Course VPC
+       |
+       v
+Transit Gateway
 
-If another VPC is introduced, additional peering connections are required.
+Demo Course VPC
+       |
+       v
+Transit Gateway
 
-With Transit Gateway, multiple VPCs can connect to a single centralized Transit Gateway:
-
-**VPC A → Transit Gateway**
-
-**VPC B → Transit Gateway**
-
-**VPC C → Transit Gateway**
-
-This provides a centralized hub-and-spoke networking architecture.
-
-Transit Gateway becomes particularly useful when the number of connected VPCs grows.
-
----
-
-# Key Concepts Learned
-
-Through this hands-on project, I gained practical experience with:
-
-- AWS Transit Gateway
-- Transit Gateway creation
-- Transit Gateway attachments
-- Connecting multiple VPCs through a centralized networking hub
-- Creating public and private subnets
-- Internet Gateway configuration
-- Public and private route tables
-- Adding Transit Gateway routes
-- Routing traffic between multiple VPC CIDR ranges
-- Launching EC2 instances in different VPCs
-- Testing private IPv4 connectivity between VPCs
-- Understanding Transit Gateway attachment behavior
-- Validating connectivity using ICMP
-- Performing a negative connectivity test
-- Understanding the difference between VPC Peering and Transit Gateway
+Redshift VPC
+       |
+       v
+Transit Gateway
+```
 
 ---
 
-# Final Result
+## Transit Gateway Route Table
 
-The Transit Gateway implementation successfully connected three VPCs:
+The Transit Gateway has its own route table.
 
-- AWS Course VPC — `31.0.0.0/16`
-- Demo Course VPC — `71.0.0.0/16`
-- Redshift VPC — `10.0.0.0/16`
+This route table determines where traffic should be forwarded.
 
-The final implementation consisted of:
+The destination CIDRs used in this lab were:
 
-1. Three VPCs
-2. Public and private subnets
-3. Internet Gateways
-4. Public and private route tables
-5. One Transit Gateway
-6. Three Transit Gateway attachments
-7. Transit Gateway routes in the VPC route tables
-8. Three EC2 instances
-9. Private IPv4 connectivity testing
-10. Negative connectivity testing
-
-The successful ping tests between all three VPCs confirmed that the Transit Gateway attachments and route-table configuration were working correctly.
-
-The negative test further demonstrated that removing the required Transit Gateway route blocks communication between the VPCs.
+```text
+31.0.0.0/16
+71.0.0.0/16
+10.0.0.0/16
+```
 
 ---
 
-## Next
+## VPC Route Tables
 
-The project will continue with additional AWS VPC networking concepts and progressively extend the architecture.
+The VPC route tables also need routes pointing to the Transit Gateway.
+
+For example, the AWS Course VPC requires routes toward:
+
+```text
+71.0.0.0/16 -> Transit Gateway
+10.0.0.0/16 -> Transit Gateway
+```
+
+Similarly, the other VPCs require routes toward the destination VPCs.
+
+Therefore, successful communication requires routing to be correctly configured on both sides of the Transit Gateway path.
 
 ---
 
-[← Previous: VPC Peering](10-vpc-peering.md) | [Back to Project README](../README.md)
+## Private IP Connectivity
+
+The connectivity tests were performed between EC2 instances using their private IP addresses.
+
+The traffic remained within the AWS networking environment through the Transit Gateway rather than requiring communication through public IP addresses.
+
+---
+
+# 44. Transit Gateway vs VPC Peering
+
+VPC Peering and Transit Gateway solve related but different networking problems.
+
+### VPC Peering
+
+VPC Peering provides a direct connection between two VPCs:
+
+```text
+VPC-A <------> VPC-B
+```
+
+For multiple VPCs, additional peering connections may be required.
+
+### Transit Gateway
+
+Transit Gateway provides a centralized networking hub:
+
+```text
+             VPC-A
+               |
+               v
+          Transit Gateway
+            /        \
+           v          v
+        VPC-B       VPC-C
+```
+
+This makes Transit Gateway particularly useful when an environment contains many VPCs and requires centralized connectivity.
+
+---
+
+# 45. Important Routing Lesson
+
+One of the most important lessons from this lab is that simply attaching a VPC to a Transit Gateway does not automatically guarantee connectivity.
+
+The complete path requires:
+
+```text
+Source EC2
+    |
+    v
+VPC Route Table
+    |
+    v
+Transit Gateway
+    |
+    v
+Transit Gateway Route Table
+    |
+    v
+Destination VPC Attachment
+    |
+    v
+Destination VPC Route Table
+    |
+    v
+Destination EC2
+```
+
+If one required route is missing, communication can fail.
+
+The negative testing performed in this lab demonstrated this behavior.
+
+---
+
+# 46. Final Architecture
+
+The final Transit Gateway architecture consists of three VPCs connected through one centralized Transit Gateway.
+
+```text
+                         +----------------------+
+                         |   Transit Gateway    |
+                         +----------------------+
+                            /        |        \
+                           /         |         \
+                          /          |          \
+                         v           v           v
+                AWS Course VPC  Demo Course VPC  Redshift VPC
+                 31.0.0.0/16    71.0.0.0/16     10.0.0.0/16
+                      |               |                |
+                      v               v                v
+                   EC2             EC2              EC2
+```
+
+The Transit Gateway provides the centralized connectivity path between the three VPCs.
+
+---
+
+# 47. Final Result
+
+The Transit Gateway configuration was successfully completed.
+
+### VPCs
+
+```text
+AWS Course VPC
+31.0.0.0/16
+```
+
+```text
+Demo Course VPC
+71.0.0.0/16
+```
+
+```text
+Redshift VPC
+10.0.0.0/16
+```
+
+### Transit Gateway
+
+```text
+AWS Course VPC
+       |
+       v
+Transit Gateway
+       ^
+       |
+       +------ Demo Course VPC
+       |
+       +------ Redshift VPC
+```
+
+### Connectivity Tests
+
+```text
+AWS Course -> Demo Course
+SUCCESS
+```
+
+```text
+AWS Course -> Redshift
+SUCCESS
+```
+
+```text
+Demo Course -> AWS Course
+SUCCESS
+```
+
+```text
+Demo Course -> Redshift
+SUCCESS
+```
+
+```text
+Redshift -> AWS Course
+SUCCESS
+```
+
+```text
+Redshift -> Demo Course
+SUCCESS
+```
+
+The negative test also confirmed that removing a required Transit Gateway route blocked communication.
+
+After restoring the route, connectivity was successfully restored.
+
+---
+
+# 48. What This Lab Demonstrated
+
+This hands-on implementation demonstrated how to use **AWS Transit Gateway to provide centralized private connectivity between multiple VPCs**.
+
+The complete implementation covered:
+
+1. Creating multiple VPCs.
+2. Creating public and private subnets.
+3. Configuring Internet Gateways.
+4. Configuring route tables.
+5. Creating a Transit Gateway.
+6. Creating VPC Transit Gateway attachments.
+7. Configuring Transit Gateway routes.
+8. Updating VPC route tables.
+9. Launching EC2 instances.
+10. Testing private IP connectivity between VPCs.
+11. Performing a negative routing test.
+12. Restoring the route and verifying connectivity.
+
+The key networking model demonstrated in this lab is:
+
+```text
+Multiple VPCs
+      |
+      v
+Transit Gateway
+      |
+      v
+Centralized Connectivity
+      |
+      v
+Private VPC-to-VPC Communication
+```
+
+---
+
+## ➡️ Next Section
+
+[← Previous: VPC Peering](10-vpc-peering.md) | [Next: Transit Gateway Cross-Region Peering →](12-transit-gateway-cross-region-peering.md)
+
+[Back to Project README](../README.md)
