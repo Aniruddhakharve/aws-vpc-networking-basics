@@ -187,34 +187,6 @@ The architecture consists of two VPCs deployed in different AWS regions.
 
 ![AWS VPC Transit Gateway Cross-Region Peering Architecture](../architecture/AWS-VPC-Transit-Gateway-Cross-Region-Peering-Architecture.png)
 
-```text
-                          AWS Cloud
-┌──────────────────────────────────────────────────────────────────────┐
-│                                                                      │
-│       Mumbai Region                         US East (N. Virginia)   │
-│       31.0.0.0/16                           41.0.0.0/16             │
-│                                                                      │
-│   ┌──────────────────────┐               ┌──────────────────────┐    │
-│   │    Mumbai VPC        │               │    Virginia VPC      │    │
-│   │    31.0.0.0/16       │               │    41.0.0.0/16       │    │
-│   │                      │               │                      │    │
-│   │  Public Subnet       │               │  Public Subnet       │    │
-│   │      │               │               │      │               │    │
-│   │     EC2              │               │     EC2              │    │
-│   └──────────┬───────────┘               └──────────┬───────────┘    │
-│              │                                      │                │
-│              │ VPC Attachment                       │ VPC Attachment │
-│              ▼                                      ▼                │
-│   ┌──────────────────────┐               ┌──────────────────────┐    │
-│   │   Mumbai Transit     │◄─────────────►│  Virginia Transit    │    │
-│   │      Gateway         │   Peering     │      Gateway         │    │
-│   └──────────────────────┘               └──────────────────────┘    │
-│                                                                      │
-│              31.0.0.0/16  ◄──────►  41.0.0.0/16                    │
-│                                                                      │
-└──────────────────────────────────────────────────────────────────────┘
-```
-
 ---
 
 ## Regional Configuration
