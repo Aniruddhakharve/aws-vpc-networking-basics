@@ -1,6 +1,6 @@
 # AWS VPC Networking Fundamentals
 
-A hands-on AWS networking project demonstrating the design, implementation, and validation of core Amazon VPC networking concepts, including public and private subnets, Internet Gateway, route tables, NAT Gateway, EC2, Security Groups, EC2 User Data, Application Load Balancer, Target Groups, VPC Peering, and AWS Transit Gateway.
+A hands-on AWS networking project demonstrating the design, implementation, and validation of core Amazon VPC networking concepts, including public and private subnets, Internet Gateway, route tables, NAT Gateway, EC2, Security Groups, EC2 User Data, Application Load Balancer, Target Groups, VPC Peering, AWS Transit Gateway, and Transit Gateway Cross-Region Peering.
 
 ---
 
@@ -85,6 +85,35 @@ The required remote VPC routes were then configured in the VPC route tables.
 
 ![AWS Transit Gateway Architecture](architecture/AWS-VPC-Transit-Gateway-Architecture.png)
 
+### Transit Gateway Cross-Region Peering Extension
+
+A separate cross-region Transit Gateway Peering lab was implemented between two VPCs located in different AWS Regions.
+
+The practical used:
+
+- Mumbai — `ap-south-1`
+- N. Virginia — `us-east-1`
+
+The Mumbai VPC uses:
+
+```text
+31.0.0.0/16
+```
+
+The N. Virginia VPC uses:
+
+```text
+41.0.0.0/16
+```
+
+Each region contains its own Transit Gateway.
+
+The two regional Transit Gateways are connected using a **Transit Gateway Peering Attachment**.
+
+Mumbai acts as the **requester** and N. Virginia acts as the **accepter**.
+
+![AWS VPC Transit Gateway Cross-Region Peering Architecture](architecture/AWS-VPC-Transit-Gateway-Cross-Region-Peering-Architecture.png)
+
 ---
 
 ## 🎯 Project Objectives
@@ -144,7 +173,13 @@ The objective of this project is to gain hands-on experience with:
 - Transit Gateway connectivity validation
 - Negative connectivity testing
 - Transit Gateway routing dependencies
-- VPC Peering vs. Transit Gateway architecture
+- Transit Gateway Peering
+- Cross-region Transit Gateway connectivity
+- Transit Gateway requester and accepter concepts
+- Transit Gateway Peering connection states
+- Cross-region Transit Gateway route configuration
+- Bidirectional private connectivity through Transit Gateway Peering
+- Comparing VPC Peering with Transit Gateway architecture
 
 ---
 
@@ -202,6 +237,30 @@ AWS Transit Gateway
  /        |        \
 AWS Course  Demo Course  Redshift
 31.0.0.0/16 71.0.0.0/16 10.0.0.0/16
+```
+
+### Transit Gateway Cross-Region Peering Lab
+
+| Resource | Mumbai | N. Virginia |
+|---|---|---|
+| AWS Region | `ap-south-1` | `us-east-1` |
+| VPC CIDR | `31.0.0.0/16` | `41.0.0.0/16` |
+| Transit Gateway | Mumbai TGW | Virginia TGW |
+| TGW Role | Requester | Accepter |
+| TGW Peering | Connected | Connected |
+| VPC Attachment | Attached | Attached |
+| Remote VPC Route | `41.0.0.0/16 → Transit Gateway` | `31.0.0.0/16 → Transit Gateway` |
+| EC2 | Deployed | Deployed |
+
+The cross-region architecture is:
+
+```text
+Mumbai VPC                         Virginia VPC
+31.0.0.0/16                       41.0.0.0/16
+     │                                  │
+     ▼                                  ▼
+Mumbai Transit Gateway  ◄──────►  Virginia Transit Gateway
+                              Peering
 ```
 
 ---
@@ -596,6 +655,71 @@ A negative test was also performed by removing a required Transit Gateway route.
 
 ---
 
+### Transit Gateway Cross-Region Peering
+
+Transit Gateway Cross-Region Peering was implemented to establish private connectivity between VPCs located in different AWS Regions through separate regional Transit Gateways.
+
+The practical used:
+
+```text
+Mumbai
+ap-south-1
+VPC CIDR: 31.0.0.0/16
+```
+
+and:
+
+```text
+N. Virginia
+us-east-1
+VPC CIDR: 41.0.0.0/16
+```
+
+A Transit Gateway was created in each region.
+
+```text
+Mumbai VPC                         Virginia VPC
+31.0.0.0/16                       41.0.0.0/16
+     │                                  │
+     ▼                                  ▼
+Mumbai Transit Gateway  ◄──────►  Virginia Transit Gateway
+                              Peering
+```
+
+Mumbai was configured as the **requester** and Virginia as the **accepter**.
+
+The Transit Gateway Peering connection was created from the Mumbai region using the Transit Gateway ID of the Virginia region.
+
+The peering request was then accepted in the Virginia region.
+
+After the peering connection became available, a VPC attachment was created in each region.
+
+The Mumbai VPC was attached to the Mumbai Transit Gateway.
+
+The Virginia VPC was attached to the Virginia Transit Gateway.
+
+Remote VPC routes were then configured on both sides.
+
+#### Mumbai Route Tables
+
+```text
+41.0.0.0/16 → Transit Gateway
+```
+
+#### Virginia Route Tables
+
+```text
+31.0.0.0/16 → Transit Gateway
+```
+
+EC2 instances were launched in the public subnet of each VPC for connectivity testing.
+
+The EC2 instances successfully communicated using their **private IPv4 addresses**.
+
+[View Transit Gateway Cross-Region Peering implementation →](docs/12-transit-gateway-cross-region-peering.md)
+
+---
+
 ## 🔄 Traffic Flow
 
 ### Public EC2 → Internet
@@ -624,7 +748,7 @@ Administrator
  Public EC2
  31.0.1.x
      ↓
-VPC Local Routing
+ VPC Local Routing
      ↓
  Private EC2
  31.0.2.x
@@ -799,6 +923,56 @@ Redshift EC2
 ```
 
 The Transit Gateway therefore provides centralized connectivity between all three VPCs.
+
+---
+
+### Mumbai VPC → Transit Gateway → Virginia VPC
+
+```text
+Mumbai EC2
+31.0.0.0/16
+     ↓
+Mumbai VPC Route Table
+     ↓
+41.0.0.0/16 → Mumbai Transit Gateway
+     ↓
+Mumbai Transit Gateway
+     ↓
+Transit Gateway Peering
+     ↓
+Virginia Transit Gateway
+     ↓
+Virginia VPC Route Table
+     ↓
+Virginia EC2
+41.0.0.0/16
+```
+
+---
+
+### Virginia VPC → Transit Gateway → Mumbai VPC
+
+```text
+Virginia EC2
+41.0.0.0/16
+     ↓
+Virginia VPC Route Table
+     ↓
+31.0.0.0/16 → Virginia Transit Gateway
+     ↓
+Virginia Transit Gateway
+     ↓
+Transit Gateway Peering
+     ↓
+Mumbai Transit Gateway
+     ↓
+Mumbai VPC Route Table
+     ↓
+Mumbai EC2
+31.0.0.0/16
+```
+
+The reverse path is also required for bidirectional communication.
 
 ---
 
@@ -1362,6 +1536,379 @@ After restoring the required route, Transit Gateway connectivity was successfull
 
 ---
 
+## 🌎 Transit Gateway Cross-Region Peering Validation
+
+### Virginia VPC Configuration
+
+A VPC was configured in the **US East (N. Virginia) `us-east-1`** region for the cross-region Transit Gateway Peering lab.
+
+The Virginia VPC uses:
+
+```text
+41.0.0.0/16
+```
+
+![Virginia VPC Configuration](screenshots/127-virginia-vpc-configuration.png)
+
+The Virginia VPC was successfully created:
+
+![Virginia VPC Created](screenshots/128-virginia-vpc-created.png)
+
+---
+
+### Virginia Public and Private Subnets
+
+The Virginia public subnet was configured:
+
+![Virginia Public Subnet Configuration](screenshots/129-virginia-public-subnet-configuration.png)
+
+The Virginia private subnet was configured:
+
+![Virginia Private Subnet Configuration](screenshots/130-virginia-private-subnet-configuration.png)
+
+Both subnets were successfully created:
+
+![Virginia Subnets Created](screenshots/131-virginia-subnets-created.png)
+
+---
+
+### Virginia Internet Gateway
+
+An Internet Gateway was created for the Virginia VPC:
+
+![Virginia Internet Gateway Creation](screenshots/132-virginia-internet-gateway-creation.png)
+
+The Internet Gateway was attached to the Virginia VPC:
+
+![Virginia Internet Gateway Attached](screenshots/133-virginia-internet-gateway-attached.png)
+
+---
+
+### Virginia Route Tables
+
+The Virginia public route table was created:
+
+![Virginia Public Route Table Creation](screenshots/134-virginia-public-route-table-creation.png)
+
+The public route table was configured with the Internet Gateway route:
+
+![Virginia Public Route Table Internet Route](screenshots/135-virginia-public-route-table-internet-route.png)
+
+The Virginia public subnet was associated with the public route table:
+
+![Virginia Public Subnet Route Table Association](screenshots/136-virginia-public-subnet-route-table-association.png)
+
+The Virginia private route table was created:
+
+![Virginia Private Route Table Creation](screenshots/137-virginia-private-route-table-creation.png)
+
+The Virginia private subnet was associated with the private route table:
+
+![Virginia Private Subnet Route Table Association](screenshots/138-virginia-private-subnet-route-table-association.png)
+
+---
+
+### Virginia Transit Gateway
+
+A Transit Gateway was configured in the Virginia region to act as the **accepter** side of the cross-region Transit Gateway Peering connection.
+
+![Virginia Transit Gateway Configuration](screenshots/139-virginia-transit-gateway-configuration.png)
+
+The Virginia Transit Gateway was successfully created:
+
+![Virginia Transit Gateway Created](screenshots/140-virginia-transit-gateway-created.png)
+
+---
+
+### Mumbai Transit Gateway
+
+A Transit Gateway was created in the Mumbai region to act as the **requester** side.
+
+The Mumbai Transit Gateway was configured:
+
+![Mumbai Transit Gateway Configuration](screenshots/141-mumbai-transit-gateway-configuration.png)
+
+The Mumbai Transit Gateway was successfully created:
+
+![Mumbai Transit Gateway Created](screenshots/142-mumbai-transit-gateway-created.png)
+
+---
+
+### Transit Gateway Peering Request
+
+The Mumbai Transit Gateway was configured to create a **Transit Gateway Peering Attachment** toward the Virginia Transit Gateway.
+
+The Virginia Transit Gateway ID was entered as the accepter Transit Gateway.
+
+![Mumbai Transit Gateway Peering Configuration](screenshots/143-mumbai-transit-gateway-peering-configuration.png)
+
+The peering request entered the pending acceptance state:
+
+![Mumbai Transit Gateway Peering Pending Acceptance](screenshots/144-mumbai-transit-gateway-peering-pending-acceptance.png)
+
+---
+
+### Virginia Transit Gateway Peering Acceptance
+
+The peering request was then viewed from the Virginia region.
+
+![Virginia Transit Gateway Peering Request](screenshots/145-virginia-transit-gateway-peering-request.png)
+
+The Virginia side accepted the Transit Gateway Peering request:
+
+![Virginia Transit Gateway Peering Accepted](screenshots/146-virginia-transit-gateway-peering-accepted.png)
+
+After propagation, the Transit Gateway Peering connection became available:
+
+![Transit Gateway Peering Available](screenshots/147-transit-gateway-peering-available.png)
+
+The peering architecture was now:
+
+```text
+Mumbai Transit Gateway
+        │
+        │ Transit Gateway Peering
+        │
+        ▼
+Virginia Transit Gateway
+```
+
+---
+
+### Mumbai VPC Transit Gateway Attachment
+
+The Mumbai VPC was attached to the Mumbai Transit Gateway.
+
+The VPC attachment was configured using:
+
+```text
+VPC:
+31.0.0.0/16
+
+Subnets:
+Public Subnet
+Private Subnet
+```
+
+![Mumbai VPC Transit Gateway Attachment Configuration](screenshots/148-mumbai-vpc-transit-gateway-attachment-configuration.png)
+
+The Mumbai VPC Transit Gateway attachment became available:
+
+![Mumbai VPC Transit Gateway Attachment Available](screenshots/149-mumbai-vpc-transit-gateway-attachment-available.png)
+
+---
+
+### Virginia VPC Transit Gateway Attachment
+
+The Virginia VPC was attached to the Virginia Transit Gateway.
+
+The VPC attachment was configured using:
+
+```text
+VPC:
+41.0.0.0/16
+
+Subnets:
+Public Subnet
+Private Subnet
+```
+
+![Virginia VPC Transit Gateway Attachment Configuration](screenshots/150-virginia-vpc-transit-gateway-attachment-configuration.png)
+
+The Virginia VPC Transit Gateway attachment became available:
+
+![Virginia VPC Transit Gateway Attachment Available](screenshots/151-virginia-vpc-transit-gateway-attachment-available.png)
+
+At this point, the architecture contained:
+
+```text
+Mumbai VPC
+31.0.0.0/16
+     │
+     ▼
+Mumbai Transit Gateway
+     │
+     │ Transit Gateway Peering
+     │
+     ▼
+Virginia Transit Gateway
+     │
+     ▼
+Virginia VPC
+41.0.0.0/16
+```
+
+---
+
+### Mumbai Route Table Configuration
+
+The Mumbai public route table was updated to send traffic destined for the Virginia VPC through the Mumbai Transit Gateway.
+
+```text
+Destination: 41.0.0.0/16
+Target:      Transit Gateway
+```
+
+![Mumbai Public Route Table Transit Gateway Route](screenshots/152-mumbai-public-route-table-transit-gateway-route.png)
+
+The Mumbai private route table was also configured with the remote Virginia CIDR:
+
+```text
+Destination: 41.0.0.0/16
+Target:      Transit Gateway
+```
+
+![Mumbai Private Route Table Transit Gateway Route](screenshots/153-mumbai-private-route-table-transit-gateway-route.png)
+
+---
+
+### Virginia Route Table Configuration
+
+The Virginia public route table was updated to send traffic destined for the Mumbai VPC through the Virginia Transit Gateway.
+
+```text
+Destination: 31.0.0.0/16
+Target:      Transit Gateway
+```
+
+![Virginia Public Route Table Transit Gateway Route](screenshots/154-virginia-public-route-table-transit-gateway-route.png)
+
+The Virginia private route table was also configured with the remote Mumbai CIDR:
+
+```text
+Destination: 31.0.0.0/16
+Target:      Transit Gateway
+```
+
+![Virginia Private Route Table Transit Gateway Route](screenshots/155-virginia-private-route-table-transit-gateway-route.png)
+
+The routing configuration was therefore:
+
+```text
+Mumbai VPC Route Table
+41.0.0.0/16 → Mumbai Transit Gateway
+
+
+Virginia VPC Route Table
+31.0.0.0/16 → Virginia Transit Gateway
+```
+
+---
+
+### EC2 Instances for Cross-Region Testing
+
+An EC2 instance was launched in the Mumbai public subnet for connectivity testing.
+
+![Mumbai EC2 Network Configuration](screenshots/156-mumbai-ec2-network-configuration.png)
+
+The Mumbai EC2 instance successfully entered the Running state.
+
+The private IPv4 address was used for the cross-region connectivity test.
+
+![Mumbai EC2 Running](screenshots/157-mumbai-ec2-running.png)
+
+An EC2 instance was also launched in the Virginia public subnet.
+
+![Virginia EC2 Network Configuration](screenshots/158-virginia-ec2-network-configuration.png)
+
+The Virginia EC2 instance successfully entered the Running state.
+
+The private IPv4 address was used for the cross-region connectivity test.
+
+![Virginia EC2 Running](screenshots/159-virginia-ec2-running.png)
+
+---
+
+### Mumbai → Virginia Private IP Connectivity
+
+The Mumbai EC2 instance successfully pinged the private IPv4 address of the Virginia EC2 instance.
+
+```text
+Mumbai EC2
+     ↓
+Mumbai VPC Route Table
+     ↓
+41.0.0.0/16 → Transit Gateway
+     ↓
+Mumbai Transit Gateway
+     ↓
+Transit Gateway Peering
+     ↓
+Virginia Transit Gateway
+     ↓
+Virginia VPC Route Table
+     ↓
+Virginia EC2 Private IP
+```
+
+![Mumbai to Virginia Ping Success](screenshots/160-mumbai-to-virginia-ping-success.png)
+
+This confirmed successful private IPv4 connectivity from Mumbai to Virginia through Transit Gateway Peering.
+
+---
+
+### Virginia → Mumbai Private IP Connectivity
+
+The reverse direction was also tested.
+
+The Virginia EC2 instance successfully pinged the private IPv4 address of the Mumbai EC2 instance.
+
+```text
+Virginia EC2
+     ↓
+Virginia VPC Route Table
+     ↓
+31.0.0.0/16 → Transit Gateway
+     ↓
+Virginia Transit Gateway
+     ↓
+Transit Gateway Peering
+     ↓
+Mumbai Transit Gateway
+     ↓
+Mumbai VPC Route Table
+     ↓
+Mumbai EC2 Private IP
+```
+
+![Virginia to Mumbai Ping Success](screenshots/161-virginia-to-mumbai-ping-success.png)
+
+This confirmed successful bidirectional private IPv4 connectivity between the Mumbai and Virginia VPCs.
+
+---
+
+### Final Cross-Region Architecture
+
+The final architecture achieved in this practical was:
+
+```text
+                    AWS
+                     │
+        ┌────────────┴────────────┐
+        │                         │
+   Mumbai Region            N. Virginia Region
+   ap-south-1                us-east-1
+        │                         │
+        ▼                         ▼
+   Mumbai VPC                Virginia VPC
+   31.0.0.0/16              41.0.0.0/16
+        │                         │
+        │                         │
+        ▼                         ▼
+Mumbai Transit Gateway  ◄──►  Virginia Transit Gateway
+                           Peering
+        │                         │
+        ▼                         ▼
+    Mumbai EC2               Virginia EC2
+    Private IP               Private IP
+```
+
+The final connectivity was verified in both directions using private IPv4 addresses.
+
+This demonstrates that Transit Gateway Peering can provide private cross-region connectivity between VPCs when the Transit Gateway Peering connection, VPC attachments, and required route-table entries are correctly configured.
+
+---
+
 ## 📸 Final AWS Resource Map
 
 The AWS VPC Resource Map shows the networking relationships after adding the NAT Gateway and deploying the EC2 instances.
@@ -1412,6 +1959,17 @@ AWS Course  Demo Course  Redshift
 31.0.0.0/16 71.0.0.0/16 10.0.0.0/16
 ```
 
+The Transit Gateway Cross-Region Peering architecture extends the project into two regional Transit Gateways:
+
+```text
+Mumbai VPC                         Virginia VPC
+31.0.0.0/16                       41.0.0.0/16
+     │                                  │
+     ▼                                  ▼
+Mumbai Transit Gateway  ◄──────►  Virginia Transit Gateway
+                              Peering
+```
+
 ---
 
 ## 📚 Detailed Implementation
@@ -1429,6 +1987,7 @@ Detailed step-by-step documentation is available for each part of the project:
 9. [Application Load Balancer and Target Groups](docs/09-application-load-balancer.md)
 10. [VPC Peering](docs/10-vpc-peering.md)
 11. [Transit Gateway and Transit Gateway Attachments](docs/11-transit-gateway.md)
+12. [Transit Gateway Cross-Region Peering](docs/12-transit-gateway-cross-region-peering.md)
 
 Each section includes explanations of the networking concept, configuration details, implementation steps, traffic-flow explanations, validation, and AWS Console screenshots.
 
@@ -1447,7 +2006,8 @@ aws-vpc-networking-basics/
 │   ├── AWS-VPC-EC2-NAT-Gateway-Architecture.png
 │   ├── AWS-VPC-EC2-ALB-Architecture.png
 │   ├── AWS-VPC-Peering-Architecture.png
-│   └── AWS-VPC-Transit-Gateway-Architecture.png
+│   ├── AWS-VPC-Transit-Gateway-Architecture.png
+│   └── AWS-VPC-Transit-Gateway-Cross-Region-Peering-Architecture.png
 │
 ├── docs/
 │   ├── 01-vpc.md
@@ -1460,7 +2020,8 @@ aws-vpc-networking-basics/
 │   ├── 08-security-groups.md
 │   ├── 09-application-load-balancer.md
 │   ├── 10-vpc-peering.md
-│   └── 11-transit-gateway.md
+│   ├── 11-transit-gateway.md
+│   └── 12-transit-gateway-cross-region-peering.md
 │
 └── screenshots/
     ├── 01-vpc-configuration.png
@@ -1588,7 +2149,42 @@ aws-vpc-networking-basics/
     ├── 123-redshift-to-demo-ping-success.png
     ├── 124-transit-gateway-route-removed-negative-test.png
     ├── 125-transit-gateway-connectivity-blocked.png
-    └── 126-final-transit-gateway-connectivity.png
+    ├── 126-final-transit-gateway-connectivity.png
+    ├── 127-virginia-vpc-configuration.png
+    ├── 128-virginia-vpc-created.png
+    ├── 129-virginia-public-subnet-configuration.png
+    ├── 130-virginia-private-subnet-configuration.png
+    ├── 131-virginia-subnets-created.png
+    ├── 132-virginia-internet-gateway-creation.png
+    ├── 133-virginia-internet-gateway-attached.png
+    ├── 134-virginia-public-route-table-creation.png
+    ├── 135-virginia-public-route-table-internet-route.png
+    ├── 136-virginia-public-subnet-route-table-association.png
+    ├── 137-virginia-private-route-table-creation.png
+    ├── 138-virginia-private-subnet-route-table-association.png
+    ├── 139-virginia-transit-gateway-configuration.png
+    ├── 140-virginia-transit-gateway-created.png
+    ├── 141-mumbai-transit-gateway-configuration.png
+    ├── 142-mumbai-transit-gateway-created.png
+    ├── 143-mumbai-transit-gateway-peering-configuration.png
+    ├── 144-mumbai-transit-gateway-peering-pending-acceptance.png
+    ├── 145-virginia-transit-gateway-peering-request.png
+    ├── 146-virginia-transit-gateway-peering-accepted.png
+    ├── 147-transit-gateway-peering-available.png
+    ├── 148-mumbai-vpc-transit-gateway-attachment-configuration.png
+    ├── 149-mumbai-vpc-transit-gateway-attachment-available.png
+    ├── 150-virginia-vpc-transit-gateway-attachment-configuration.png
+    ├── 151-virginia-vpc-transit-gateway-attachment-available.png
+    ├── 152-mumbai-public-route-table-transit-gateway-route.png
+    ├── 153-mumbai-private-route-table-transit-gateway-route.png
+    ├── 154-virginia-public-route-table-transit-gateway-route.png
+    ├── 155-virginia-private-route-table-transit-gateway-route.png
+    ├── 156-mumbai-ec2-network-configuration.png
+    ├── 157-mumbai-ec2-running.png
+    ├── 158-virginia-ec2-network-configuration.png
+    ├── 159-virginia-ec2-running.png
+    ├── 160-mumbai-to-virginia-ping-success.png
+    └── 161-virginia-to-mumbai-ping-success.png
 ```
 
 ---
@@ -1655,7 +2251,13 @@ Through this project, I gained hands-on experience with:
 - Transit Gateway connectivity validation
 - Negative connectivity testing
 - Transit Gateway routing dependencies
-- Comparing VPC Peering with Transit Gateway architecture
+- Transit Gateway Peering
+- Cross-region Transit Gateway connectivity
+- Transit Gateway requester and accepter concepts
+- Transit Gateway Peering connection states
+- Cross-region Transit Gateway route configuration
+- Bidirectional private connectivity through Transit Gateway Peering
+- VPC Peering vs. Transit Gateway architecture
 
 One of the key concepts demonstrated by this project is that simply naming a subnet **public** or **private** does not determine its networking behavior.
 
@@ -1693,6 +2295,24 @@ Transit Gateway extends this concept by providing a centralized connectivity hub
 
 The Transit Gateway lab also demonstrates that creating attachments alone does not automatically establish end-to-end connectivity. The required remote VPC CIDR routes must be present in the VPC route tables.
 
+Transit Gateway Cross-Region Peering extends this architecture by connecting two regional Transit Gateways through a Transit Gateway Peering Attachment.
+
+The cross-region lab demonstrates that private communication between VPCs in different AWS Regions requires:
+
+```text
+VPC Attachment
+       +
+Transit Gateway Peering
+       +
+Remote VPC Routes
+       +
+Security Group Rules
+       =
+Private Cross-Region Connectivity
+```
+
+The final validation confirmed bidirectional private IPv4 connectivity between the Mumbai and Virginia EC2 instances.
+
 ---
 
 ## 🧹 Resource Cleanup
@@ -1721,6 +2341,10 @@ Resources created throughout this project include:
 - Transit Gateway VPC attachments
 - Additional VPCs used for Transit Gateway testing
 - EC2 instances used for Transit Gateway connectivity testing
+- Regional Transit Gateways used for cross-region Transit Gateway Peering
+- Transit Gateway Peering Attachment
+- VPC attachments used for cross-region Transit Gateway connectivity
+- EC2 instances used for cross-region Transit Gateway connectivity testing
 
 NAT Gateway, public IPv4 resources, EC2 instances, Transit Gateway resources, and other running AWS resources can incur charges, so temporary lab resources should not be left running unnecessarily.
 
@@ -1741,5 +2365,7 @@ The Application Load Balancer and Target Group configuration in this project is 
 The VPC Peering configuration is also intended for learning and demonstration purposes. VPC Peering is a one-to-one connection and does not provide transitive routing between multiple VPCs.
 
 The Transit Gateway configuration is also intended for learning and demonstration purposes. Transit Gateway provides centralized connectivity between multiple attached VPCs, but the appropriate route-table configuration is still required for traffic to reach the intended destination.
+
+The Transit Gateway Cross-Region Peering configuration is also intended for learning and demonstration purposes. Cross-region connectivity requires Transit Gateway Peering, appropriate VPC attachments, remote VPC routes, and compatible security rules.
 
 The project will continue to evolve as additional AWS networking concepts are implemented.
