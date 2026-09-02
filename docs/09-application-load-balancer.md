@@ -10,13 +10,16 @@ The purpose of the Application Load Balancer is to accept incoming HTTP traffic 
 
 The architecture is extended from:
 
+```text
     Internet
         |
         v
     Public EC2
+```
 
 to:
 
+```text
     Internet
         |
         v
@@ -29,10 +32,238 @@ to:
         |                   |
         v                   v
     Public EC2 #1       Public EC2 #2
+```
 
 The project also demonstrates what happens when a private EC2 instance is registered in the same Target Group.
 
 The private EC2 instance becomes unhealthy because the Application Load Balancer cannot successfully reach its HTTP service through the required network path.
+
+---
+
+# 1. What is an Application Load Balancer?
+
+An **Application Load Balancer (ALB)** is an AWS load balancing service that operates at the **application layer (Layer 7)**.
+
+It is designed to receive application traffic such as HTTP and HTTPS requests and distribute those requests across multiple backend targets.
+
+In this project, the Application Load Balancer acts as the **central entry point** for the application.
+
+Instead of users directly accessing individual EC2 instances, they access the ALB using its DNS name.
+
+The ALB then forwards the request to a healthy backend EC2 instance registered in a Target Group.
+
+The basic architecture is:
+
+```text
+                    Internet
+                       |
+                       | HTTP
+                       v
+             +----------------------+
+             | Application Load     |
+             | Balancer             |
+             +----------+-----------+
+                        |
+                        v
+                +---------------+
+                | Target Group  |
+                +-------+-------+
+                        |
+              +---------+---------+
+              |                   |
+              v                   v
+        Public EC2 #1       Public EC2 #2
+```
+
+The ALB therefore provides a single endpoint through which users can access an application running on multiple backend servers.
+
+---
+
+# 2. Why Do We Need an Application Load Balancer?
+
+Without a load balancer, users would need to access individual EC2 instances directly.
+
+For example:
+
+```text
+User
+ |
+ +----> EC2 #1
+ |
+ +----> EC2 #2
+```
+
+This creates several problems.
+
+### 1. Users need to know individual server addresses
+
+Users would have to access the public IP address or DNS name of a specific EC2 instance.
+
+### 2. Traffic is not centrally distributed
+
+There is no single component responsible for distributing incoming requests between multiple backend servers.
+
+### 3. Backend availability becomes important
+
+If a particular EC2 instance becomes unavailable, users directly accessing that instance cannot reach the application.
+
+### 4. Adding more servers becomes difficult
+
+When additional EC2 instances are created, users should not have to manually discover and use every new server address.
+
+An Application Load Balancer solves these problems by providing a **single entry point** and distributing traffic across healthy backend targets.
+
+The architecture becomes:
+
+```text
+                    User
+                     |
+                     v
+             Application Load
+                Balancer
+                     |
+                     v
+                Target Group
+                     |
+             +-------+-------+
+             |               |
+             v               v
+          EC2 #1           EC2 #2
+```
+
+The user only needs to know the ALB DNS name.
+
+---
+
+# 3. How Does an Application Load Balancer Work?
+
+The Application Load Balancer works together with several AWS components.
+
+The main components used in this project are:
+
+- Application Load Balancer
+- Listener
+- Target Group
+- EC2 instances
+- Security Groups
+- Subnets
+- Route Tables
+- Health Checks
+
+The traffic flow is:
+
+```text
+Client
+  |
+  | HTTP request
+  v
+Application Load Balancer
+  |
+  | Listener : HTTP 80
+  v
+Target Group
+  |
+  +----> Healthy EC2 #1
+  |
+  +----> Healthy EC2 #2
+```
+
+### Listener
+
+The listener waits for incoming traffic on a configured protocol and port.
+
+In this project:
+
+```text
+Protocol : HTTP
+Port     : 80
+```
+
+### Target Group
+
+The Target Group contains the backend resources that can receive traffic from the ALB.
+
+In this project, the targets are EC2 instances.
+
+### Health Check
+
+The ALB continuously checks the health of registered targets.
+
+Only healthy targets are considered available for normal traffic routing.
+
+Therefore:
+
+```text
+ALB
+ |
+ +----> Healthy Target    → Can receive traffic
+ |
+ +----> Unhealthy Target  → Not selected for normal traffic
+```
+
+This allows the load balancer to route traffic toward available backend servers.
+
+---
+
+# 4. What Problem Are We Solving?
+
+The objective of this section is to extend the existing AWS VPC architecture from direct EC2 access to a **centralized application entry point using an Application Load Balancer**.
+
+Initially, the application can be accessed directly:
+
+```text
+Internet
+   |
+   v
+Public EC2
+```
+
+The problem is that the application is directly dependent on an individual EC2 instance.
+
+We want to create an architecture where:
+
+```text
+Internet
+   |
+   v
+Application Load Balancer
+   |
+   v
+Target Group
+   |
+   +----> Public EC2 #1
+   |
+   +----> Public EC2 #2
+```
+
+The ALB should:
+
+- Receive HTTP traffic from users.
+- Forward requests to backend EC2 instances.
+- Perform health checks.
+- Route traffic to healthy targets.
+- Provide a single DNS endpoint for the application.
+- Allow multiple EC2 instances to serve the same application.
+
+This project also intentionally registers a private EC2 instance in the Target Group so that the health status of public and private targets can be observed.
+
+The final implementation demonstrates:
+
+```text
+Internet
+    |
+    v
+Application Load Balancer
+    |
+    v
+Target Group
+    |
+    +----> Public EC2 #1 → Healthy
+    |
+    +----> Public EC2 #2 → Healthy
+    |
+    └----> Private EC2   → Unhealthy
+```
 
 ---
 
@@ -66,6 +297,7 @@ In this lab, the targets are **EC2 instances**.
 
 The Target Group was configured to use:
 
+```text
     Target Type     : Instances
     Protocol        : HTTP
     Port            : 80
@@ -73,11 +305,13 @@ The Target Group was configured to use:
     VPC             : aws-course-mu1-vpc
     Health Check    : HTTP
     Health Path     : /
+```
 
 The Target Group provides the collection of backend resources that the Application Load Balancer can route requests to.
 
 The traffic flow is:
 
+```text
     Client
        |
        v
@@ -90,6 +324,7 @@ The traffic flow is:
        |                      |
        v                      v
     EC2 Instance #1       EC2 Instance #2
+```
 
 ---
 
@@ -99,26 +334,36 @@ A new Target Group was created from the EC2 console.
 
 The target type was set to:
 
-    Instances
+```text
+Instances
+```
 
 because the backend resources used in this lab are EC2 instances.
 
 The communication protocol was configured as:
 
-    HTTP
+```text
+HTTP
+```
 
 and the target port was configured as:
 
-    80
+```text
+80
+```
 
 The existing custom VPC was selected:
 
-    aws-course-mu1-vpc
-    31.0.0.0/16
+```text
+aws-course-mu1-vpc
+31.0.0.0/16
+```
 
 The health check was configured using HTTP with the default path:
 
-    /
+```text
+/
+```
 
 ### Target Group Configuration
 
@@ -136,6 +381,7 @@ The Target Group was configured with the existing EC2 instances.
 
 At this stage, both the public and private EC2 instances were selected as targets.
 
+```text
     Public EC2
         |
         +---- Port 80
@@ -143,6 +389,7 @@ At this stage, both the public and private EC2 instances were selected as target
     Private EC2
         |
         +---- Port 80
+```
 
 Both instances were registered with the Target Group.
 
@@ -174,12 +421,13 @@ The Target Group is now ready to be associated with an Application Load Balancer
 
 ## What is an Application Load Balancer?
 
-An Application Load Balancer operates at the application layer and is designed to distribute HTTP and HTTPS traffic across multiple targets.
+An **Application Load Balancer** operates at the application layer and is designed to distribute HTTP and HTTPS traffic across multiple targets.
 
 In this project, the ALB acts as the internet-facing entry point.
 
 The architecture becomes:
 
+```text
     Internet User
           |
           | HTTP
@@ -193,6 +441,7 @@ The architecture becomes:
           |                   |
           v                   v
     Public EC2           Private EC2
+```
 
 The ALB receives the external request and forwards it to a registered target in the Target Group according to its listener and load-balancing configuration.
 
@@ -204,9 +453,11 @@ An **Application Load Balancer** was selected from the EC2 Load Balancers sectio
 
 The basic configuration was:
 
+```text
     Name   : aws-course-mu-alb
     Scheme : Internet-facing
     IP     : IPv4
+```
 
 The internet-facing scheme allows the load balancer to receive traffic from users over the internet.
 
@@ -222,13 +473,19 @@ The ALB was configured as an IPv4 internet-facing Application Load Balancer.
 
 The existing custom VPC was selected:
 
-    VPC
+```text
+VPC
+```
 
+```text
     aws-course-mu1-vpc
+```
 
-    CIDR:
+CIDR:
 
+```text
     31.0.0.0/16
+```
 
 The ALB was configured across the available Availability Zones and their associated subnets.
 
@@ -254,9 +511,11 @@ The Application Load Balancer requires a security group that allows incoming HTT
 
 The security group was configured to allow:
 
+```text
     Protocol : TCP
     Port     : 80
     Source   : 0.0.0.0/0
+```
 
 This allows HTTP requests from IPv4 clients on the internet to reach the ALB.
 
@@ -274,24 +533,34 @@ The HTTP port `80` rule is required because the Application Load Balancer is ser
 
 The Application Load Balancer was configured with an HTTP listener:
 
+```text
     Protocol : HTTP
     Port     : 80
+```
 
 The default routing action was configured as:
 
+```text
     Forward to target groups
+```
 
 The previously created Target Group was selected:
 
+```text
     aws-course-mu1-target-group
+```
 
 The routing weight was:
 
+```text
     Weight : 1
+```
 
 which represents:
 
+```text
     100%
+```
 
 of the traffic assigned to this Target Group.
 
@@ -301,6 +570,7 @@ of the traffic assigned to this Target Group.
 
 The listener therefore follows this path:
 
+```text
     HTTP : 80
         |
         v
@@ -308,6 +578,7 @@ The listener therefore follows this path:
         |
         v
     Registered Targets
+```
 
 ---
 
@@ -319,16 +590,20 @@ After the configuration was completed, the Application Load Balancer was created
 
 The ALB reached the:
 
+```text
     Active
+```
 
 state.
 
 The load balancer was configured as:
 
+```text
     Type   : Application
     Scheme : Internet-facing
     IP     : IPv4
     VPC    : aws-course-mu1-vpc
+```
 
 ### ALB DNS Details
 
@@ -360,6 +635,7 @@ The response confirms that the request reached an EC2 backend through the Applic
 
 The architecture is now:
 
+```text
     Browser
        |
        | HTTP
@@ -374,6 +650,7 @@ The architecture is now:
        |
        v
     Apache
+```
 
 ---
 
@@ -389,11 +666,13 @@ The second instance was configured with the same basic Apache User Data script u
 
 The purpose was to have two healthy public backend servers:
 
+```text
     Public EC2 #1
     31.0.1.181
 
     Public EC2 #2
     31.0.1.141
+```
 
 This makes it possible to observe different backend responses when accessing the same ALB DNS name.
 
@@ -419,7 +698,9 @@ The User Data script automatically installs Apache and generates the custom serv
 
 After launching the instance, it successfully entered the:
 
+```text
     Running
+```
 
 state.
 
@@ -455,6 +736,7 @@ The second public EC2 instance was registered with the existing Target Group.
 
 The Target Group now contains three EC2 instances:
 
+```text
     Target Group
          |
          +── Public EC2 #1
@@ -462,10 +744,13 @@ The Target Group now contains three EC2 instances:
          +── Public EC2 #2
          |
          └── Private EC2
+```
 
 All three targets are configured to receive traffic on:
 
+```text
     HTTP : 80
+```
 
 ### Target Group with Two Public EC2 Instances
 
@@ -483,9 +768,11 @@ The Application Load Balancer performs health checks against registered targets.
 
 The final Target Group status showed:
 
+```text
     Public EC2 #1 → Healthy
     Public EC2 #2 → Healthy
     Private EC2   → Unhealthy
+```
 
 ### Final Target Health Status
 
@@ -509,7 +796,9 @@ The ALB does not require the user to know the individual EC2 public IP addresses
 
 The user only accesses:
 
+```text
     Application Load Balancer DNS
+```
 
 The ALB receives the request and routes it to a healthy target.
 
@@ -519,8 +808,10 @@ The ALB receives the request and routes it to a healthy target.
 
 The first request through the ALB returned the server information for:
 
+```text
     Hostname: ip-31-0-1-141
     IP Address: 31.0.1.141
+```
 
 ### ALB Backend Response 1
 
@@ -528,7 +819,9 @@ The first request through the ALB returned the server information for:
 
 This confirms that the ALB successfully routed the request to the EC2 instance with private IP:
 
+```text
     31.0.1.141
+```
 
 ---
 
@@ -536,8 +829,10 @@ This confirms that the ALB successfully routed the request to the EC2 instance w
 
 A subsequent request through the same ALB DNS name returned the server information for:
 
+```text
     Hostname: ip-31-0-1-181
     IP Address: 31.0.1.181
+```
 
 ### ALB Backend Response 2
 
@@ -553,33 +848,35 @@ This demonstrates that multiple healthy targets can serve requests through the s
 
 The final architecture demonstrated in this section is:
 
+```text
                              Internet
                                 |
                                 |
                                 v
-                     +----------------------+
-                     | Application Load     |
-                     | Balancer              |
-                     | Internet-facing       |
-                     | HTTP : 80             |
-                     +----------+-----------+
+                      +----------------------+
+                      | Application Load     |
+                      | Balancer              |
+                      | Internet-facing       |
+                      | HTTP : 80             |
+                      +----------+-----------+
                                 |
                                 v
-                     +----------------------+
-                     | Target Group          |
-                     | HTTP : 80             |
-                     +----------+-----------+
+                      +----------------------+
+                      | Target Group          |
+                      | HTTP : 80             |
+                      +----------+-----------+
                                 |
-                  +-------------+-------------+
-                  |             |             |
-                  v             v             v
-            Public EC2 #1  Public EC2 #2  Private EC2
-              Healthy        Healthy       Unhealthy
-              :80             :80            :80
-                  |             |
-                  +------+------+
-                         |
-                      Apache
+                     +-------------+-------------+
+                     |             |             |
+                     v             v             v
+               Public EC2 #1  Public EC2 #2  Private EC2
+                 Healthy        Healthy       Unhealthy
+                 :80             :80            :80
+                     |             |
+                     +------+------+
+                            |
+                          Apache
+```
 
 The two healthy public EC2 instances are available to receive traffic from the Application Load Balancer.
 
@@ -591,6 +888,7 @@ The private EC2 instance remains registered but unhealthy.
 
 When a user accesses the ALB DNS name:
 
+```text
     User
      |
      | HTTP request
@@ -604,6 +902,7 @@ When a user accesses the ALB DNS name:
      +----> Healthy Public EC2 #1
      |
      └----> Healthy Public EC2 #2
+```
 
 The ALB selects a healthy registered target for the request.
 
@@ -621,9 +920,11 @@ The private EC2 instance was intentionally kept in the Target Group to demonstra
 
 The private EC2 instance:
 
+```text
     Subnet        : Private
     Public IPv4   : None
     HTTP Service  : Apache
+```
 
 The public EC2 instances are reachable by the internet-facing ALB through the configured network path.
 
@@ -633,9 +934,11 @@ Therefore, the ALB cannot successfully complete its HTTP health check against th
 
 This results in:
 
+```text
     Public EC2 #1 → Healthy
     Public EC2 #2 → Healthy
     Private EC2   → Unhealthy
+```
 
 This demonstrates an important relationship between:
 
@@ -663,6 +966,7 @@ These two components have different responsibilities.
 
 The overall relationship is:
 
+```text
     Client
       |
       v
@@ -677,6 +981,7 @@ The overall relationship is:
       +----> Healthy Target
       |
       └----> Unhealthy Target
+```
 
 ---
 
@@ -709,6 +1014,7 @@ The Application Load Balancer was successfully created and connected to the cust
 
 The final implementation contains:
 
+```text
     VPC
      |
      +-- Public Subnet
@@ -720,9 +1026,11 @@ The final implementation contains:
      +-- Private Subnet
             |
             +-- Private EC2
+```
 
 The ALB and Target Group provide the application traffic path:
 
+```text
     Internet
         |
         v
@@ -736,6 +1044,7 @@ The ALB and Target Group provide the application traffic path:
         +----> Public EC2 #2  [Healthy]
         |
         └----> Private EC2    [Unhealthy]
+```
 
 Testing the same ALB DNS name produced responses from both public EC2 instances, confirming that the ALB is successfully routing traffic across the healthy backend targets.
 
