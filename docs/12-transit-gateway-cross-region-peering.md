@@ -185,6 +185,8 @@ The final result was successful two-way communication between the Mumbai and Vir
 
 The architecture consists of two VPCs deployed in different AWS regions.
 
+![AWS VPC Transit Gateway Cross-Region Peering Architecture](../architecture/AWS-VPC-Transit-Gateway-Cross-Region-Peering-Architecture.png)
+
 ```text
                           AWS Cloud
 ┌──────────────────────────────────────────────────────────────────────┐
