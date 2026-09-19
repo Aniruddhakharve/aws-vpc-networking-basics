@@ -12,7 +12,7 @@ The practical implementation contains three VPCs:
 
 - AWS Course VPC — `31.0.0.0/16`
 - Demo Course VPC — `71.0.0.0/16`
-- Redshift VPC — `10.0.0.0/16`
+- Redshift VPC — `10.0.0.0/16` (the VPC name used in this training lab; no Amazon Redshift cluster was deployed)
 
 The Transit Gateway provides centralized connectivity between these VPCs.
 

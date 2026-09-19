@@ -782,7 +782,7 @@ This is an important result of the lab.
 
 The two public EC2 instances are reachable by the internet-facing ALB and successfully respond to the HTTP health check.
 
-The private EC2 instance is registered in the Target Group, but it is unhealthy because the ALB cannot successfully reach its HTTP service through the configured network path.
+The private EC2 instance is registered in the Target Group, but it is unhealthy because the ALB does not have a working network path to the target under the routing and security configuration used in this lab.
 
 ---
 
@@ -928,7 +928,7 @@ The private EC2 instance:
 
 The public EC2 instances are reachable by the internet-facing ALB through the configured network path.
 
-The private subnet, however, does not have a direct Internet Gateway route.
+The private subnet in this lab does not have a direct Internet Gateway route, and the configured networking does not provide a working path for the ALB health check to the private target.
 
 Therefore, the ALB cannot successfully complete its HTTP health check against the private target in this architecture.
 

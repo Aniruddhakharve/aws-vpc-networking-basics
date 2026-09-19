@@ -1628,5 +1628,3 @@ The IAM policy and role can also be removed if they were created specifically fo
 [← Previous: Transit Gateway Cross-Region Peering](./12-transit-gateway-cross-region-peering.md)
 
 [↑ Back to README](../README.md)
-
-[Next: Section 14](#)
