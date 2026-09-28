@@ -1003,6 +1003,6 @@ Flow Log Record
 
 # Navigation
 
-[← Previous: Section 11 — Transit Gateway Cross-Region Peering](./12-transit-gateway-cross-region-peering.md)
+[← Previous: Transit Gateway Cross-Region Peering](./12-transit-gateway-cross-region-peering.md)
 
 [↑ Back to README](../README.md)
