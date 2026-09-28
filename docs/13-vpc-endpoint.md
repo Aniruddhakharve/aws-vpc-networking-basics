@@ -1624,6 +1624,6 @@ The IAM policy and role can also be removed if they were created specifically fo
 
 ---
 
-[← Previous: Transit Gateway Cross-Region Peering](./12-transit-gateway-cross-region-peering.md) | [Next: VPC Flow Logs →](./14-vpc-flow-logs.md)
+[← Previous: VPC Endpoint](./13-vpc-endpoint.md)
 
 [↑ Back to Project README](../README.md)
