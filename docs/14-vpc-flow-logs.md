@@ -29,7 +29,7 @@ In this lab, VPC Flow Logs were configured to send traffic-flow records to **Ama
 - [19. How to Explain VPC Flow Logs in an Interview](#19-how-to-explain-vpc-flow-logs-in-an-interview)
 - [20. Final Architecture](#20-final-architecture)
 - [21. Final Result](#21-final-result)
-- [Navigation](#navigation)
+
 
 ---
 
