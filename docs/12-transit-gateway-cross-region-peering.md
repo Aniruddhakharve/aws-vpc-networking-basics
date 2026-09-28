@@ -874,3 +874,15 @@ In this practical:
 ```
 
 was successfully established and tested using private IP connectivity.
+
+
+### Add this AFTER the existing final line:
+
+```markdown
+---
+
+# Navigation
+
+[← Previous: Transit Gateway](./11-transit-gateway.md) | [Next: VPC Endpoint →](./13-vpc-endpoint.md)
+
+[↑ Back to Project README](../README.md)
