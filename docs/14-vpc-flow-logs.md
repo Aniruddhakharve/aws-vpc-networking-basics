@@ -1001,8 +1001,8 @@ Flow Log Record
 
 ---
 
-# Navigation
+---
 
-[← Previous: Transit Gateway Cross-Region Peering](./12-transit-gateway-cross-region-peering.md)
+[← Previous: VPC Endpoint](./13-vpc-endpoint.md)
 
-[↑ Back to README](../README.md)
+[↑ Back to Project README](../README.md)
