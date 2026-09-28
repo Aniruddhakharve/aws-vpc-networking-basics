@@ -1621,10 +1621,9 @@ The IAM policy and role can also be removed if they were created specifically fo
 > The screenshots and documentation remain available in this repository as evidence of the completed hands-on lab.
 
 
+
 ---
 
-# 19. Navigation
+[← Previous: Transit Gateway Cross-Region Peering](./12-transit-gateway-cross-region-peering.md) | [Next: VPC Flow Logs →](./14-vpc-flow-logs.md)
 
-[← Previous: Transit Gateway Cross-Region Peering](./12-transit-gateway-cross-region-peering.md)
-
-[↑ Back to README](../README.md)
+[↑ Back to Project README](../README.md)
