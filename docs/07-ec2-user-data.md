@@ -312,4 +312,6 @@ No manual Apache installation was required after the instance was launched.
 
 ---
 
-[← Previous: EC2 in VPC](06-ec2-in-vpc.md) | [Back to Project README](../README.md)
+[← Previous: EC2 in VPC](06-ec2-in-vpc.md) | [Next: Security Groups →](08-security-groups.md)
+
+[↑ Back to Project README](../README.md)
