@@ -563,4 +563,6 @@ This completes the **Security Groups** section of the AWS VPC networking project
 
 ---
 
-[← Previous: EC2 User Data](07-ec2-user-data.md) | [Back to Project README](../README.md)
+[← Previous: EC2 User Data](07-ec2-user-data.md) | [Next: Application Load Balancer →](09-application-load-balancer.md)
+
+[↑ Back to Project README](../README.md)
