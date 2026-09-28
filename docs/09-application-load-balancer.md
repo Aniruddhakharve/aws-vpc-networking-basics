@@ -1052,10 +1052,8 @@ The project has now progressed from manually accessing individual EC2 instances 
 
 ---
 
-## ➡️ Next Step
+## ➡️ Next Section
 
-Continue to the next section of the AWS VPC networking project.
+[← Previous: Security Groups](08-security-groups.md) | [Next: VPC Peering →](10-vpc-peering.md)
 
----
-
-[← Previous: Security Groups](08-security-groups.md) | [Back to Project README](../README.md)
+[↑ Back to Project README](../README.md)
