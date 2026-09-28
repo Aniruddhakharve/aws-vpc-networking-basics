@@ -39,7 +39,7 @@
 - [16. Final Architecture](#16-final-architecture)
 - [17. Final Result](#17-final-result)
 - [18. Cleanup](#18-cleanup)
-- [19. Navigation](#19-navigation)
+
 
 
 ---
