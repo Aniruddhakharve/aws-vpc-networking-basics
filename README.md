@@ -1,6 +1,6 @@
 # AWS VPC Networking Fundamentals
 
-A hands-on AWS networking project demonstrating the design, implementation, and validation of core Amazon VPC networking concepts, including public and private subnets, Internet Gateway, route tables, NAT Gateway, EC2, Security Groups, EC2 User Data, Application Load Balancer, Target Groups, VPC Peering, AWS Transit Gateway, Transit Gateway Cross-Region Peering, VPC Endpoints, and VPC Flow Logs.
+A hands-on AWS networking project demonstrating the design, implementation, and validation of core Amazon VPC networking concepts, including public and private subnets, Internet Gateway, route tables, NAT Gateway, EC2, Security Groups, EC2 User Data, Application Load Balancer, Network Load Balancer, Target Groups, VPC Peering, AWS Transit Gateway, Transit Gateway Cross-Region Peering, VPC Endpoints, and VPC Flow Logs.
 
 ---
 
@@ -27,7 +27,8 @@ The architecture includes:
 - EC2 User Data
 - Apache web servers
 - One internet-facing Application Load Balancer
-- One Target Group
+- One internet-facing Network Load Balancer
+- Target Groups
 
 The public subnet uses a default route to the Internet Gateway.
 
@@ -276,8 +277,6 @@ The private EC2 was also accessed using Systems Manager Session Manager through 
 
 ![AWS VPC Endpoint Architecture](architecture/AWS-VPC-Endpoint-Architecture.png)
 
-
-
 ### VPC Flow Logs Extension
 
 A separate **VPC Flow Logs** lab was implemented to capture network traffic metadata from the VPC and deliver the records to **Amazon CloudWatch Logs**.
@@ -307,9 +306,63 @@ Traffic was generated from the EC2 instance and the resulting flow records were 
 
 A captured record included a `REJECT` action, demonstrating how VPC Flow Logs can provide traffic metadata for network troubleshooting and visibility.
 
-
 [View VPC Flow Logs implementation →](docs/14-vpc-flow-logs.md)
 
+### Network Load Balancer Extension
+
+A separate **Network Load Balancer (NLB)** lab was implemented using the existing Mumbai VPC. The lab demonstrates network-level load balancing using TCP traffic and two EC2 backend servers running Apache.
+
+The lab uses:
+
+- VPC — `31.0.0.0/16`
+- Public Subnet — `31.0.1.0/24`
+- Availability Zone — `ap-south-1a`
+- EC2 — `NLB-Server-1`
+- EC2 — `NLB-Server-2`
+- Target Group — `NLB-Target-Group`
+- Network Load Balancer — `NLB-Lab`
+- Scheme — Internet-facing
+- Listener — TCP `:80`
+- Target Group Protocol — TCP `:80`
+- Health Check — HTTP `/`
+
+The two EC2 instances run Apache on port `80` and return different responses so the backend receiving NLB traffic can be identified during testing.
+
+The final NLB architecture was:
+
+```text
+                         Internet
+                            |
+                            | TCP :80
+                            v
+                  +---------------------+
+                  |      NLB-Lab        |
+                  | Internet-facing     |
+                  | Network Load        |
+                  | Balancer            |
+                  +----------+----------+
+                             |
+                             | TCP :80
+                             v
+                  +---------------------+
+                  |  NLB-Target-Group   |
+                  |       TCP :80       |
+                  +----------+----------+
+                             |
+                       +-----+-----+
+                       |           |
+                       v           v
+                NLB-Server-1  NLB-Server-2
+                   Apache        Apache
+                    :80           :80
+
+                  Public Subnet
+                   31.0.1.0/24
+```
+
+![AWS Network Load Balancer Architecture](architecture/AWS-VPC-Network-Load-Balancer-Architecture.png)
+
+[View Network Load Balancer implementation →](docs/15-network-load-balancer.md)
 
 ---
 
@@ -353,6 +406,14 @@ The objective of this project is to gain hands-on experience with:
 - Load balancing across multiple EC2 instances
 - ALB DNS names
 - Backend response validation
+- Network Load Balancers
+- NLB listeners
+- NLB target groups
+- TCP load balancing
+- NLB health checks
+- Internet-facing NLBs
+- NLB DNS names
+- Backend response validation through NLB
 - VPC Peering
 - Cross-region VPC connectivity
 - VPC Peering requester and accepter concepts
@@ -549,6 +610,19 @@ This project covers the following AWS networking topics:
 - CloudWatch Logs destination
 - IAM permissions
 - Flow Log record fields
+
+### 15. Network Load Balancer
+
+- Network Load Balancer concepts
+- Layer 4 load balancing
+- TCP listeners
+- NLB target groups
+- EC2 target registration
+- NLB health checks
+- Healthy and unhealthy targets
+- Internet-facing NLB
+- NLB DNS name
+- Backend response validation
 - ENI correlation
 - `ACCEPT` and `REJECT`
 - Network troubleshooting
@@ -567,7 +641,8 @@ aws-vpc-networking-basics/
 │   ├── AWS-VPC-Subnet-Routing-Architecture.png
 │   ├── AWS-VPC-Transit-Gateway-Architecture.png
 │   ├── AWS-VPC-Transit-Gateway-Cross-Region-Peering-Architecture.png
-│   └── AWS-VPC-Endpoint-Architecture.png
+│   ├── AWS-VPC-Endpoint-Architecture.png
+│   └── AWS-VPC-Network-Load-Balancer-Architecture.png
 │
 ├── docs/
 │   ├── 01-vpc.md
@@ -583,7 +658,8 @@ aws-vpc-networking-basics/
 │   ├── 11-transit-gateway.md
 │   ├── 12-transit-gateway-cross-region-peering.md
 │   ├── 13-vpc-endpoint.md
-│   └── 14-vpc-flow-logs.md
+│   ├── 14-vpc-flow-logs.md
+│   └── 15-network-load-balancer.md
 │
 ├── screenshots/
 │   ├── 01-vpc-created.png
@@ -644,7 +720,26 @@ aws-vpc-networking-basics/
 │   ├── 201-vpc-flow-logs-ec2-eni.png
 │   ├── 202-vpc-flow-logs-traffic-generation.png
 │   ├── 203-vpc-flow-logs-log-stream.png
-│   └── 204-vpc-flow-logs-records.png
+│   ├── 204-vpc-flow-logs-records.png
+│   ├── 205-nlb-vpc.png
+│   ├── 206-nlb-server-1-configuration.png
+│   ├── 207-nlb-server-1-user-data.png
+│   ├── 208-nlb-server-1-running.png
+│   ├── 209-nlb-server-1-apache-test.png
+│   ├── 210-nlb-server-2-configuration.png
+│   ├── 211-nlb-server-2-user-data.png
+│   ├── 212-nlb-server-2-running.png
+│   ├── 213-nlb-server-2-apache-test.png
+│   ├── 214-nlb-target-group-configuration.png
+│   ├── 215-nlb-target-group-targets.png
+│   ├── 216-nlb-target-group-created.png
+│   ├── 217-nlb-targets-healthy.png
+│   ├── 218-nlb-network-mapping.png
+│   ├── 219-nlb-listener-and-routing.png
+│   ├── 220-nlb-provisioning.png
+│   ├── 221-nlb-active.png
+│   ├── 222-nlb-first-request.png
+│   └── 223-nlb-second-backend-response.png
 │
 └── README.md
 ```
@@ -773,6 +868,14 @@ Documentation:
 
 [14 — VPC Flow Logs](docs/14-vpc-flow-logs.md)
 
+### Lab 15 — Network Load Balancer
+
+Created an internet-facing Network Load Balancer with a TCP port 80 listener and two healthy EC2 backend targets.
+
+Documentation:
+
+[15 — Network Load Balancer](docs/15-network-load-balancer.md)
+
 ---
 
 ## 🌐 Network Configuration
@@ -845,6 +948,22 @@ Documentation:
 | Aggregation | `1 minute` |
 | Destination | CloudWatch Logs |
 
+### Network Load Balancer Lab
+
+| Resource | Configuration |
+|---|---|
+| VPC | `31.0.0.0/16` |
+| Public Subnet | `31.0.1.0/24` |
+| Availability Zone | `ap-south-1a` |
+| EC2 Server 1 | `NLB-Server-1` |
+| EC2 Server 2 | `NLB-Server-2` |
+| Target Group | `NLB-Target-Group` |
+| Target Protocol | `TCP :80` |
+| Health Check | `HTTP /` |
+| Network Load Balancer | `NLB-Lab` |
+| Scheme | Internet-facing |
+| Listener | `TCP :80` |
+
 ---
 
 ## 🔐 Security Group Configuration
@@ -916,7 +1035,7 @@ Application Load Balancer
 Target Group
    |
    ├── EC2 Instance
-   │
+   |
    └── EC2 Instance
 ```
 
@@ -947,11 +1066,11 @@ The VPC Peering lab connected:
 ```text
 Mumbai VPC
 31.0.0.0/16
-       |
-       |
+     |
+     |
 VPC Peering
-       |
-       |
+     |
+     |
 Virginia VPC
 41.0.0.0/16
 ```
@@ -1339,9 +1458,63 @@ The VPC Flow Logs implementation includes the following screenshots:
 
 ---
 
+## 📊 Network Load Balancer Validation
+
+The Network Load Balancer lab included the following validation screenshots.
+
+### VPC and Backend Server 1
+
+![NLB VPC](screenshots/205-nlb-vpc.png)
+
+![NLB Server 1 Configuration](screenshots/206-nlb-server-1-configuration.png)
+
+![NLB Server 1 User Data](screenshots/207-nlb-server-1-user-data.png)
+
+![NLB Server 1 Running](screenshots/208-nlb-server-1-running.png)
+
+![NLB Server 1 Apache Test](screenshots/209-nlb-server-1-apache-test.png)
+
+### Backend Server 2
+
+![NLB Server 2 Configuration](screenshots/210-nlb-server-2-configuration.png)
+
+![NLB Server 2 User Data](screenshots/211-nlb-server-2-user-data.png)
+
+![NLB Server 2 Running](screenshots/212-nlb-server-2-running.png)
+
+![NLB Server 2 Apache Test](screenshots/213-nlb-server-2-apache-test.png)
+
+### Target Group
+
+![NLB Target Group Configuration](screenshots/214-nlb-target-group-configuration.png)
+
+![NLB Target Group Targets](screenshots/215-nlb-target-group-targets.png)
+
+![NLB Target Group Created](screenshots/216-nlb-target-group-created.png)
+
+### NLB and Target Health
+
+![NLB Targets Healthy](screenshots/217-nlb-targets-healthy.png)
+
+![NLB Network Mapping](screenshots/218-nlb-network-mapping.png)
+
+![NLB Listener and Routing](screenshots/219-nlb-listener-and-routing.png)
+
+![NLB Provisioning](screenshots/220-nlb-provisioning.png)
+
+![NLB Active](screenshots/221-nlb-active.png)
+
+![NLB First Request](screenshots/222-nlb-first-request.png)
+
+### NLB Backend Validation
+
+![NLB Second Backend Response](screenshots/223-nlb-second-backend-response.png)
+
+---
+
 ## 📖 Detailed Implementation
 
-The complete hands-on implementation is divided into 14 documentation sections.
+The complete hands-on implementation is divided into 15 documentation sections.
 
 ### 1. VPC
 
@@ -1398,6 +1571,10 @@ The complete hands-on implementation is divided into 14 documentation sections.
 ### 14. VPC Flow Logs
 
 [Read the VPC Flow Logs implementation →](docs/14-vpc-flow-logs.md)
+
+### 15. Network Load Balancer
+
+[Read the Network Load Balancer implementation →](docs/15-network-load-balancer.md)
 
 ---
 
@@ -1464,6 +1641,17 @@ ping -c 4 google.com
 ```
 
 The resulting traffic metadata was observed in CloudWatch Logs.
+
+### Network Load Balancer Validation
+
+The NLB lab was validated by:
+
+- Verifying both EC2 backend servers directly
+- Registering both EC2 instances in the NLB target group
+- Confirming both targets became `Healthy`
+- Verifying the NLB listener on TCP port `80`
+- Accessing the NLB DNS endpoint
+- Confirming backend responses through the NLB
 
 ---
 
@@ -1654,6 +1842,14 @@ Through this project, I gained hands-on experience with:
 - Load balancing across multiple EC2 instances
 - ALB DNS names
 - Backend response validation
+- Network Load Balancers
+- Layer 4 load balancing
+- TCP listeners
+- NLB target groups
+- NLB target health checks
+- Internet-facing NLBs
+- NLB DNS names
+- Backend response validation through NLB
 - VPC Peering
 - Cross-region VPC connectivity
 - VPC Peering requester and accepter concepts
@@ -1777,6 +1973,9 @@ Resources created throughout this project include:
 - Security Groups
 - Target Group
 - Application Load Balancer
+- Network Load Balancer
+- NLB Target Group
+- NLB backend EC2 instances
 - VPC Peering connection
 - Additional VPC and networking resources used in the N. Virginia VPC Peering lab
 - EC2 instances used for cross-region VPC connectivity testing
@@ -1813,6 +2012,8 @@ The VPC CIDR `31.0.0.0/16` follows the addressing used during the training lab. 
 The Security Group configuration used in this lab allows SSH and HTTP from `0.0.0.0/0` for learning and testing purposes. Restricting administrative access to trusted source addresses or using managed access mechanisms is preferable in production environments.
 
 The Application Load Balancer and Target Group configuration in this project is intended for learning and demonstration purposes.
+
+The Network Load Balancer configuration is also intended for learning and demonstration purposes. The lab uses an Internet-facing NLB with a TCP port 80 listener and two EC2 targets running Apache.
 
 The VPC Peering configuration is also intended for learning and demonstration purposes. VPC Peering is a one-to-one connection and does not provide transitive routing between multiple VPCs.
 
